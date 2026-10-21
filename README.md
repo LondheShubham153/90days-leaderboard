@@ -32,6 +32,8 @@ This project is a complete, real example of that path on one platform:
 
 It is the demo repo for the *"AI Agent se Production tak"* video from **TrainWithShubham**.
 
+**New to Catalyst?** Read [LEARN.md](LEARN.md), a guide to the core concepts and main services that uses this repo as its worked example.
+
 ## How it works
 
 ```mermaid

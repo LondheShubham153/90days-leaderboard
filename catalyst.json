@@ -1,0 +1,15 @@
+{
+  "functions": {
+    "targets": [
+      "fetcher"
+    ],
+    "ignore": [],
+    "source": "functions"
+  },
+  "slate": [
+    {
+      "name": "leaderboard-web",
+      "source": "./frontend"
+    }
+  ]
+}

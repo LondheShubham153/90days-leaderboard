@@ -1,0 +1,150 @@
+# Catalyst Pipelines: test -> deploy to Development -> smoke test -> human approval -> Production.
+#
+# The AI agent only ever works in Development. Nothing reaches Production until a person
+# approves the `approve-production` job (an email goes to the reviewer; the run stays paused).
+#
+# Set these as pipeline variables in the Catalyst console (Pipelines -> your pipeline -> Variables).
+# Mark the secrets as secret:
+#   CATALYST_TOKEN   CLI token for this project   (catalyst token:generate)
+#   CATALYST_ORG     your org ID or name
+#   PROJECT_ID       Catalyst project ID
+#   DOCKER_USER      Docker Hub user, used to pull the node image
+#   DOCKER_PASS      Docker Hub password or access token
+#   DEV_API_URL      AppSail URL in Development, e.g. https://leaderboard-api-<zaid>.development.catalystappsail.in
+#   PROD_API_URL     AppSail URL in Production,  e.g. https://leaderboard-api-<zaid>.catalystappsail.in
+version: 1.0
+
+runners:
+  standard:
+    config-id: 2   # medium: tests and CLI deploys
+  heavy:
+    config-id: 3   # high: docker build
+
+pipeline-runner: standard
+
+# Only pushes to main run the pipeline.
+pipeline-when:
+  equal:
+    - << event.ref >>
+    - refs/heads/main
+
+images:
+  node:
+    image: node:20
+    auth:
+      username: << env.DOCKER_USER >>
+      password: << env.DOCKER_PASS >>
+
+jobs:
+  # ---------------------------------------------------------------- test
+  test-backend:
+    image: node
+    steps:
+      - cd backend
+      - npm ci
+      - npm test
+
+  test-frontend:
+    image: node
+    steps:
+      - cd frontend
+      - npm ci
+      - npm test
+      - npm run build
+
+  test-fetcher:
+    image: node
+    steps:
+      - cd functions/fetcher
+      - npm ci
+      - npm test
+
+  # ------------------------------------------------------- deploy: development
+  # UNVERIFIED ON THE RUNNER: this job needs a Docker daemon, which the Catalyst docs do not
+  # promise. If `dockerd` cannot start here, replace the docker steps with a managed-runtime
+  # deploy (no container):
+  #   - >-
+  #     catalyst deploy appsail --name leaderboard-api --build-path "$PWD/backend"
+  #     --stack node20 --command "node src/server.js" ...
+  deploy-api-dev:
+    runner: heavy
+    steps:
+      - apt-get update
+      - apt-get install -y docker.io curl
+      - (dockerd > /tmp/dockerd.log 2>&1 &)
+      - sleep 10
+      - docker info
+      # AppSail only accepts linux/amd64 images.
+      - docker build --platform linux/amd64 -t leaderboard-api:ci backend
+      - >-
+        catalyst deploy appsail --name leaderboard-api --source docker://leaderboard-api:ci --port 9000
+        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --token << env.CATALYST_TOKEN >> -ni
+
+  deploy-fetcher-dev:
+    steps:
+      - >-
+        catalyst deploy --only functions:fetcher
+        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --token << env.CATALYST_TOKEN >> -ni
+
+  deploy-web-dev:
+    steps:
+      # The Slate build is static, so the API URL is baked in at build time.
+      - echo "VITE_API_BASE=<< env.DEV_API_URL >>" > frontend/.env.production
+      - node scripts/relink-slate.js
+      - >-
+        catalyst deploy slate leaderboard-web -m "pipeline build"
+        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --token << env.CATALYST_TOKEN >> -ni
+
+  # ------------------------------------------------------------------ verify
+  smoke-dev:
+    steps:
+      - apt-get update
+      - apt-get install -y curl
+      - sh scripts/smoke.sh << env.DEV_API_URL >>
+
+  # ---------------------------------------------------------- human approval
+  # One reviewer only. The run waits here with no timeout until they approve or reject.
+  approve-production:
+    type:
+      type-name: approval
+      type-variables:
+        reviewers:
+          - your-email@example.com   # CHANGE ME: the person who approves Production
+        message: Development is deployed and the smoke test passed. Approve to promote to Production.
+
+  # ------------------------------------------------------ deploy: production
+  # Production only exists once you create it in the console, and each service needs
+  # "Start Exploring" there first. UNVERIFIED: the CLI help does not list --production on
+  # `catalyst deploy`, only on `deploy slate`; the Catalyst docs say it migrates Development up.
+  # If it is rejected, promote in the console (Deploy -> Production) after the approval.
+  deploy-prod:
+    steps:
+      - >-
+        catalyst deploy --production
+        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --token << env.CATALYST_TOKEN >> -ni
+      - echo "VITE_API_BASE=<< env.PROD_API_URL >>" > frontend/.env.production
+      - node scripts/relink-slate.js
+      - >-
+        catalyst deploy slate leaderboard-web --production -m "pipeline promote"
+        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --token << env.CATALYST_TOKEN >> -ni
+
+stages:
+  - name: test
+    jobs:
+      - - test-backend
+        - test-frontend
+        - test-fetcher
+  - name: deploy-dev
+    jobs:
+      - deploy-api-dev
+      - deploy-fetcher-dev
+      - deploy-web-dev
+  - name: verify
+    jobs:
+      - smoke-dev
+  - name: approval
+    jobs:
+      - approve-production
+  - name: production
+    jobs:
+      - deploy-prod

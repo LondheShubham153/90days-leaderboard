@@ -1,0 +1,14 @@
+{
+  "table": "Learners",
+  "columns": [
+    { "name": "login", "type": "varchar", "max_length": 255 },
+    { "name": "avatar_url", "type": "varchar", "max_length": 500 },
+    { "name": "total_commits", "type": "int" },
+    { "name": "active_days", "type": "int" },
+    { "name": "current_streak", "type": "int" },
+    { "name": "longest_streak", "type": "int" },
+    { "name": "score", "type": "int" },
+    { "name": "last_active", "type": "varchar", "max_length": 20 },
+    { "name": "days", "type": "text" }
+  ]
+}

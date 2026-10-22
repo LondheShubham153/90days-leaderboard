@@ -68,16 +68,27 @@ The demo repo for the *"AI Agent se Production tak"* video from **TrainWithShubh
 | Test, deploy and gate Production | CI/CD | [`deploy.yml`](.github/workflows/deploy.yml), [`catalyst-pipelines.yml`](catalyst-pipelines.yml) |
 | Let an AI agent work safely | **MCP + CLI** | [docs/BUILD.md](docs/BUILD.md#working-with-an-ai-agent) |
 
-## CI/CD, twice
+## How it ships
 
-A push to `main` runs tests, deploys to Development and smoke-tests it. Here is the same flow on **Catalyst Pipelines**, all stages green:
+One delivery flow, written for two runners. Pick the one that matches where your code lives:
+
+```
+push to main → test (backend, fetcher, frontend) → deploy to Development → smoke test → [human approval → Production]
+```
+
+| Runner | File | Use it when | Production step |
+| --- | --- | --- | --- |
+| **Catalyst Pipelines** | [`catalyst-pipelines.yml`](catalyst-pipelines.yml) | You want CI/CD inside Catalyst, with no extra accounts | Not wired up yet |
+| **GitHub Actions** | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | Your team already works in GitHub | Waits for a `production` reviewer |
+
+Both run the same tests and the same [`scripts/smoke.sh`](scripts/smoke.sh), and both deploy with the Catalyst CLI. Development is verified end to end on each. The Catalyst Pipelines run, all stages green:
 
 <p>
 <img src="docs/screenshots/catalyst-pipeline-test.png" alt="Catalyst Pipelines run: preflight, test-backend, test-fetcher and test-frontend all SUCCESS" width="380">
 <img src="docs/screenshots/catalyst-pipeline-deploy.png" alt="Catalyst Pipelines run: deploy-fetcher, deploy-api, deploy-web and smoke-dev all SUCCESS" width="380">
 </p>
 
-The GitHub Actions version ([screenshot](docs/screenshots/ci-run.png)) also pauses for a human before Production. Production promotion is not wired up on Catalyst Pipelines.
+[GitHub Actions run screenshot](docs/screenshots/ci-run.png) · Setup for both is in [DEPLOY.md](DEPLOY.md). Known gaps are in [docs/STATUS.md](docs/STATUS.md).
 
 ## Take the challenge
 

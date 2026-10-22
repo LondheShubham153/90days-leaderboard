@@ -40,10 +40,10 @@ This is the demo repo for the *"AI Agent se Production tak"* video from **TrainW
 
 ## See it running
 
-The Production site, built from this repo and deployed to Catalyst (India data center):
+The live site, built from this repo and deployed to Catalyst (India data center, Development environment):
 
-- **Site:** <https://leaderboard-web-jkeyorhq.onslate.in>
-- **API health:** <https://leaderboard-api-50045941872.catalystappsail.in/api/health>
+- **Site:** <https://90daysofdevops-leaderboard.onslate.in>
+- **API health:** <https://leaderboard-api-50047086134.development.catalystappsail.in/api/health>
 
 A push to `main` runs tests, deploys to Development, smoke-tests it, and then waits for a person before Production:
 

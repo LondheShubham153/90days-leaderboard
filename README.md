@@ -109,13 +109,13 @@ Catalyst can only create columns from the console, so [`backend/schema.json`](ba
 | Column | Type | Max length |
 | --- | --- | --- |
 | `login` | Var Char | 255 |
-| `avatar_url` | Var Char | 500 |
+| `avatar_url` | Var Char | 255 |
 | `total_commits` | Int | |
 | `active_days` | Int | |
 | `current_streak` | Int | |
 | `longest_streak` | Int | |
 | `score` | Int | |
-| `last_active` | Var Char | 20 |
+| `last_active` | Var Char | 255 |
 | `days` | Text | |
 
 Don't add `ROWID`, `CREATORID`, `CREATEDTIME` or `MODIFIEDTIME`; Catalyst adds them.
@@ -156,7 +156,16 @@ catalyst config:set node20.bin=$(npx -y node@20 -p "process.execPath")
 MAX_FORKS=15 catalyst functions:execute fetcher --key test_job -ni
 ```
 
-For regular syncs, create a **job pool** and a **cron schedule** for the `fetcher` function in the console under **Job Scheduling**.
+For regular syncs, the `fetcher` function needs a **job pool** and a **cron schedule**. They are defined in [`infra/project-template.json`](infra/project-template.json): a pool named `leaderboard_sync` and a cron job `sync_leaderboard` that runs `*/30 * * * *` (Asia/Kolkata). See [Infrastructure as code](#infrastructure-as-code).
+
+## Infrastructure as code
+
+[`infra/project-template.json`](infra/project-template.json) is a Catalyst IaC template, exported with `catalyst iac:export`. It describes the `fetcher` function settings, the `Learners` table and its columns, the job pool, and the 30-minute cron schedule.
+
+- **It creates a new project.** `catalyst iac:import` builds a fresh project from the template; it does not update an existing one. Use it to stand the whole setup up again, or to review what the schedule is.
+- **Not covered:** AppSail and Slate do not appear in the export. Deploy them with the commands above.
+- **Not yet tested:** the template comes from a real export, but `iac:import` has not been run against it.
+- **Changing the schedule:** edit it in the console (Job Scheduling), then run `catalyst iac:export -ni` and `catalyst iac:status export` to refresh the file.
 
 ## Pipeline
 
@@ -207,6 +216,7 @@ Set them in the console under **Pipelines**, and put your own email on the `appr
 ├── backend/               Express API, Dockerfile, schema.json, store implementations
 ├── frontend/              React + Vite app deployed to Slate
 ├── functions/fetcher/     Job function: GitHub → scores → Data Store
+├── infra/                 Catalyst IaC template: schedule, job pool, table
 ├── scripts/
 │   ├── smoke.sh           Post-deploy health and schema check
 │   └── relink-slate.js    Fixes the absolute Slate path catalyst.json records

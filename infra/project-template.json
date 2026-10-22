@@ -1,0 +1,332 @@
+{
+  "name": "project-template",
+  "version": "1.0.0",
+  "parameters": {},
+  "components": {
+    "Functions": [
+      {
+        "type": "function",
+        "name": "fetcher",
+        "properties": {
+          "stack": "node20",
+          "code": {
+            "path": "functions/fetcher.zip"
+          },
+          "configuration": {
+            "environment": {
+              "variables": {
+                "MAX_FORKS": "15"
+              }
+            },
+            "memory": 256
+          },
+          "type": "job",
+          "name": "fetcher"
+        },
+        "dependsOn": []
+      }
+    ],
+    "Datastore": [
+      {
+        "type": "table",
+        "name": "Learners",
+        "properties": {
+          "table_name": "Learners"
+        },
+        "dependsOn": []
+      },
+      {
+        "type": "column",
+        "name": "Learners-login",
+        "properties": {
+          "audit_consent": false,
+          "decimal_digits": 2,
+          "column_name": "login",
+          "data_type": "varchar",
+          "is_unique": false,
+          "is_mandatory": false,
+          "search_index_enabled": false,
+          "table_id": "Learners",
+          "table_name": "Learners",
+          "max_length": 255
+        },
+        "dependsOn": [
+          "Datastore.table.Learners"
+        ]
+      },
+      {
+        "type": "column",
+        "name": "Learners-avatar_url",
+        "properties": {
+          "audit_consent": false,
+          "decimal_digits": 2,
+          "column_name": "avatar_url",
+          "data_type": "varchar",
+          "is_unique": false,
+          "is_mandatory": false,
+          "search_index_enabled": false,
+          "table_id": "Learners",
+          "table_name": "Learners",
+          "max_length": 255
+        },
+        "dependsOn": [
+          "Datastore.table.Learners"
+        ]
+      },
+      {
+        "type": "column",
+        "name": "Learners-total_commits",
+        "properties": {
+          "audit_consent": false,
+          "decimal_digits": 2,
+          "column_name": "total_commits",
+          "data_type": "int",
+          "is_unique": false,
+          "is_mandatory": false,
+          "search_index_enabled": false,
+          "table_id": "Learners",
+          "table_name": "Learners",
+          "max_length": 10
+        },
+        "dependsOn": [
+          "Datastore.table.Learners"
+        ]
+      },
+      {
+        "type": "column",
+        "name": "Learners-active_days",
+        "properties": {
+          "audit_consent": false,
+          "decimal_digits": 2,
+          "column_name": "active_days",
+          "data_type": "int",
+          "is_unique": false,
+          "is_mandatory": false,
+          "search_index_enabled": false,
+          "table_id": "Learners",
+          "table_name": "Learners",
+          "max_length": 10
+        },
+        "dependsOn": [
+          "Datastore.table.Learners"
+        ]
+      },
+      {
+        "type": "column",
+        "name": "Learners-current_streak",
+        "properties": {
+          "audit_consent": false,
+          "decimal_digits": 2,
+          "column_name": "current_streak",
+          "data_type": "int",
+          "is_unique": false,
+          "is_mandatory": false,
+          "search_index_enabled": false,
+          "table_id": "Learners",
+          "table_name": "Learners",
+          "max_length": 10
+        },
+        "dependsOn": [
+          "Datastore.table.Learners"
+        ]
+      },
+      {
+        "type": "column",
+        "name": "Learners-longest_streak",
+        "properties": {
+          "audit_consent": false,
+          "decimal_digits": 2,
+          "column_name": "longest_streak",
+          "data_type": "int",
+          "is_unique": false,
+          "is_mandatory": false,
+          "search_index_enabled": false,
+          "table_id": "Learners",
+          "table_name": "Learners",
+          "max_length": 10
+        },
+        "dependsOn": [
+          "Datastore.table.Learners"
+        ]
+      },
+      {
+        "type": "column",
+        "name": "Learners-score",
+        "properties": {
+          "audit_consent": false,
+          "decimal_digits": 2,
+          "column_name": "score",
+          "data_type": "int",
+          "is_unique": false,
+          "is_mandatory": false,
+          "search_index_enabled": false,
+          "table_id": "Learners",
+          "table_name": "Learners",
+          "max_length": 10
+        },
+        "dependsOn": [
+          "Datastore.table.Learners"
+        ]
+      },
+      {
+        "type": "column",
+        "name": "Learners-last_active",
+        "properties": {
+          "audit_consent": false,
+          "decimal_digits": 2,
+          "column_name": "last_active",
+          "data_type": "varchar",
+          "is_unique": false,
+          "is_mandatory": false,
+          "search_index_enabled": false,
+          "table_id": "Learners",
+          "table_name": "Learners",
+          "max_length": 255
+        },
+        "dependsOn": [
+          "Datastore.table.Learners"
+        ]
+      },
+      {
+        "type": "column",
+        "name": "Learners-days",
+        "properties": {
+          "audit_consent": false,
+          "decimal_digits": 2,
+          "column_name": "days",
+          "data_type": "text",
+          "is_unique": false,
+          "is_mandatory": false,
+          "search_index_enabled": false,
+          "table_id": "Learners",
+          "table_name": "Learners",
+          "max_length": 10000
+        },
+        "dependsOn": [
+          "Datastore.table.Learners"
+        ]
+      },
+      {
+        "type": "tableScope",
+        "name": "Learners-App Administrator",
+        "properties": {
+          "role_name": "App Administrator",
+          "table_scope": "GLOBAL",
+          "type": "App Administrator",
+          "table_name": "Learners"
+        },
+        "dependsOn": [
+          "Datastore.table.Learners"
+        ]
+      },
+      {
+        "type": "tableScope",
+        "name": "Learners-App User",
+        "properties": {
+          "role_name": "App User",
+          "table_scope": "GLOBAL",
+          "type": "App User",
+          "table_name": "Learners"
+        },
+        "dependsOn": [
+          "Datastore.table.Learners"
+        ]
+      },
+      {
+        "type": "tablePermission",
+        "name": "Learners-App Administrator",
+        "properties": {
+          "role_name": "App Administrator",
+          "type": "App Administrator",
+          "table_permissions": [
+            "SELECT",
+            "UPDATE",
+            "INSERT",
+            "DELETE"
+          ],
+          "table_name": "Learners"
+        },
+        "dependsOn": [
+          "Datastore.table.Learners"
+        ]
+      },
+      {
+        "type": "tablePermission",
+        "name": "Learners-App User",
+        "properties": {
+          "role_name": "App User",
+          "type": "App User",
+          "table_permissions": [
+            "SELECT"
+          ],
+          "table_name": "Learners"
+        },
+        "dependsOn": [
+          "Datastore.table.Learners"
+        ]
+      }
+    ],
+    "SchedulingJobpool": [
+      {
+        "type": "SchedulingJobpool",
+        "name": "leaderboard_sync",
+        "properties": {
+          "name": "leaderboard_sync",
+          "type": "Function",
+          "capacity": {
+            "memory": 256
+          }
+        },
+        "dependsOn": []
+      }
+    ],
+    "SchedulingCron": [
+      {
+        "type": "SchedulingCron",
+        "name": "sync_leaderboard",
+        "properties": {
+          "cron_execution_type": "pre-defined",
+          "end_time": -1,
+          "description": "Refresh the 90DaysOfDevOps leaderboard from GitHub every 30 minutes",
+          "cron_detail": {
+            "hour": 0,
+            "timezone": "Asia/Kolkata",
+            "minute": 0,
+            "second": 0
+          },
+          "cron_name": "sync_leaderboard",
+          "cron_status": true,
+          "cron_expression": "*/30 * * * *",
+          "cron_type": "CronExpression",
+          "job_meta": {
+            "headers": {},
+            "job_desc": "Runs the fetcher job function",
+            "target_type": "Function",
+            "source_type": "Cron",
+            "params": {},
+            "url": "",
+            "jobpool_details": {
+              "name": "leaderboard_sync",
+              "type": "Function",
+              "capacity": {
+                "memory": 256
+              }
+            },
+            "job_config": {
+              "retry_interval": 60,
+              "number_of_retries": 1
+            },
+            "job_name": "fetcher_sync",
+            "source_details": {
+              "source_name": "sync_leaderboard"
+            },
+            "target_details": {
+              "target_name": "fetcher"
+            }
+          }
+        },
+        "dependsOn": []
+      }
+    ]
+  }
+}

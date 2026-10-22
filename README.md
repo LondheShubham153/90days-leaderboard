@@ -103,6 +103,27 @@ What that looked like in this project:
 
 Promoting to Production copied the services and the empty table, not the data. We had to run the sync in Production on its own. The Slate app was not promoted either and needed its own `catalyst deploy slate --production`.
 
+## The UI and its theme
+
+The frontend uses the TrainWithShubham brand: purple and amber from the TWS logo on black, heavy italic type, the rocket monogram, and the logo's orbit arc behind the title.
+
+| Token | Value | Used for |
+| --- | --- | --- |
+| `--purple` | `#7a4fc4` | Fills, borders, the progress strips |
+| `--lift` | `#a98af0` | Purple **text**, ranks, focus accents |
+| `--amber` | `#ffc875` | The winner, streaks, highlights |
+| `--ink` / `--panel` | `#0a0710` / `#130e1f` | Page and card backgrounds |
+
+The tokens live at the top of [`frontend/src/styles.css`](frontend/src/styles.css); change them there and the whole app follows.
+
+- **Why two purples?** The brand purple is only 3.5:1 against the black background, below the 4.5:1 that small text needs. Text uses the lighter `--lift` (7.2:1); the brand purple stays on fills and borders. Amber measures 13:1.
+- **Fonts:** [Archivo](https://fonts.google.com/specimen/Archivo) (display, expanded italic) and [Barlow](https://fonts.google.com/specimen/Barlow) (body), loaded in [`frontend/index.html`](frontend/index.html).
+- **Phones:** below 720px the podium becomes a ranked list with the leader first, and the progress strips are hidden.
+- **Motion:** the entrance animations and the drifting rocket stop under `prefers-reduced-motion`.
+- **Logo files:** `frontend/public/rocket.png` (the monogram, transparent background) and `tws-logo.png` (the full lockup, which has a black square that `mix-blend-mode: screen` hides on the dark page).
+
+> **Testing a phone layout in headless Chrome:** its minimum window is about 500px wide, so a 390px capture shows a cropped 500px layout. Load the page in a 390px `<iframe>` instead to see the real mobile layout.
+
 ## Quick start (no Catalyst account needed)
 
 The API ships with an in-memory store, so you can run the whole app locally.
@@ -303,6 +324,7 @@ Two limits we hit are worth knowing before you hand an agent your account:
 | A job pool name is rejected | Use only letters, numbers and underscores. |
 | A manual cron run says `FAILURE` in a new environment | Use that environment's own job pool ID. |
 | The sync is slow or stops part-way | Set `GITHUB_TOKEN`, or lower `MAX_FORKS`. |
+| `catalyst deploy slate` prints "Deploy is Live!" and then `HTTP Error: 400` | The site was already updated; this was a transient follow-up call. Re-run the job (`gh run rerun <id> --failed`). It passed on the second try here. |
 
 ## Status: what is and is not proven
 
@@ -340,7 +362,7 @@ Everything here was run against a real Catalyst project unless listed below.
 ```
 .
 ├── backend/               Express API, Dockerfile, schema.json, store implementations
-├── frontend/              React + Vite app deployed to Slate
+├── frontend/              React + Vite app deployed to Slate (theme in src/styles.css, logos in public/)
 ├── functions/fetcher/     Job function: GitHub → scores → Data Store
 ├── infra/                 Catalyst IaC template: schedule, job pool, table
 ├── scripts/

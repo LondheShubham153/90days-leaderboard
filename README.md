@@ -167,24 +167,24 @@ For regular syncs, the `fetcher` function needs a **job pool** and a **cron sche
 - **Not yet tested:** the template comes from a real export, but `iac:import` has not been run against it.
 - **Changing the schedule:** edit it in the console (Job Scheduling), then run `catalyst iac:export -ni` and `catalyst iac:status export` to refresh the file.
 
-## Pipeline
+## CI/CD
 
-[`catalyst-pipelines.yaml`](catalyst-pipelines.yaml) defines the delivery flow:
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) runs on every push to `main`:
 
 ```
-test (3 jobs in parallel) → deploy to Development → smoke test → human approval → Production
+test (3 in parallel) → deploy to Development → smoke test → human approval → Production
 ```
 
-| Variable | Purpose |
-| --- | --- |
-| `CATALYST_TOKEN` | CLI token (`catalyst token:generate`) |
-| `CATALYST_ORG`, `PROJECT_ID` | Where to deploy |
-| `REVIEWER_EMAIL` | Who approves the Production promotion |
-| `DEV_API_URL`, `PROD_API_URL` | AppSail URLs baked into the Slate build |
+| Where | Name | Purpose |
+| --- | --- | --- |
+| Secret | `CATALYST_TOKEN` | CLI token (`catalyst token:generate`) |
+| Variables | `CATALYST_ORG`, `PROJECT_ID` | Where to deploy |
+| Variables | `DEV_API_URL`, `PROD_API_URL` | AppSail URLs baked into the Slate build |
+| Environment | `production` | Add a **required reviewer**: the run pauses there until they approve |
 
-Set them in the console under **Pipelines** (mark the token secret). The pipeline deploys the API with the managed Node 20 runtime, not Docker, because Catalyst does not document a Docker daemon on its runners. The Docker route in [Deploy to Catalyst](#deploy-to-catalyst) still works from your own machine.
+The deploy builds the same Docker image as the manual steps above. The `deploy-prod` job is skipped until `PROD_API_URL` is set, so create the Production environment in the Catalyst console first.
 
-> **Status: not yet run end to end.** The test, build and smoke steps are verified locally. Still unproven on a Catalyst runner: the deploy steps, and `catalyst deploy --production` in `deploy-prod`, which also needs a Production environment created in the console first.
+> **Catalyst Pipelines version.** [`catalyst-pipelines.yaml`](catalyst-pipelines.yaml) is the same flow for Catalyst's own Pipelines service. It has not been run: the Pipelines page was not available in the console used to build this repo. The GitHub Actions workflow above is the one to use.
 
 ## API
 

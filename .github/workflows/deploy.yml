@@ -1,0 +1,93 @@
+# test -> deploy to Development -> smoke test -> human approval -> Production
+#
+# Setup (repo Settings):
+#   Secret    CATALYST_TOKEN   CLI token             (catalyst token:generate)
+#   Variables CATALYST_ORG, PROJECT_ID, DEV_API_URL, PROD_API_URL (leave empty until Production exists)
+#   Environments: `development` (no rules) and `production` with a required reviewer.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  CATALYST_FLAGS: >-
+    --project ${{ vars.PROJECT_ID }} --org ${{ vars.CATALYST_ORG }}
+    --token ${{ secrets.CATALYST_TOKEN }} --dc in -ni
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dir: [backend, frontend, functions/fetcher]
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.dir }}/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - if: matrix.dir == 'frontend'
+        run: npm run build
+
+  deploy-dev:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm i -g zcatalyst-cli
+      - name: Fetcher
+        run: catalyst deploy --only functions:fetcher $CATALYST_FLAGS
+      - name: API
+        run: |
+          docker build --platform linux/amd64 -t leaderboard-api:ci backend
+          catalyst deploy appsail --name leaderboard-api --source docker://leaderboard-api:ci --port 9000 $CATALYST_FLAGS
+      - name: Web
+        run: |
+          echo "VITE_API_BASE=${{ vars.DEV_API_URL }}" > frontend/.env.production
+          node scripts/relink-slate.js
+          catalyst deploy slate leaderboard-web -m "ci ${{ github.sha }}" $CATALYST_FLAGS
+
+  smoke-dev:
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sh scripts/smoke.sh "${{ vars.DEV_API_URL }}"
+
+  # Skipped until PROD_API_URL is set. The `production` environment's required reviewer
+  # is the human approval: the run pauses here until they approve.
+  deploy-prod:
+    needs: smoke-dev
+    if: ${{ vars.PROD_API_URL != '' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm i -g zcatalyst-cli
+      - run: catalyst deploy --production $CATALYST_FLAGS
+      - run: |
+          echo "VITE_API_BASE=${{ vars.PROD_API_URL }}" > frontend/.env.production
+          node scripts/relink-slate.js
+          catalyst deploy slate leaderboard-web --production -m "ci ${{ github.sha }}" $CATALYST_FLAGS

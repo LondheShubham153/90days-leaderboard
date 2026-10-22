@@ -9,6 +9,9 @@
 #   GITHUB_TOKEN    GitHub token for the fetcher (secret); a fine-grained token with public read-only access is enough
 #   MAX_FORKS       how many forks one sync reads, e.g. 50
 #
+# No `images:` block on purpose: every image entry must carry registry credentials, and without one the jobs run
+# on Catalyst's default Ubuntu image, which already has the Catalyst CLI. The test job checks that its Node is 20+.
+#
 # Why GITHUB_TOKEN and MAX_FORKS live here: a deploy replaces the function's variables with the ones in
 # catalyst-config.json. scripts/inject-fetcher-env.js fills that file in on the runner so they survive.
 version: 1.0
@@ -18,31 +21,23 @@ pipeline-when:
     - << event.ref >>
     - refs/heads/main
 
-images:
-  node:
-    image: node:20
-
 jobs:
   # Tests and the dependency audit gate every deploy. The audit looks at what ships, not at dev tooling.
   test-backend:
-    image: node
     steps:
+      - node -e "if (Number(process.versions.node.split('.')[0]) < 20) { console.error('Node 20+ required, got ' + process.version); process.exit(1); }"
       - cd backend && npm ci && npm test && npm audit --omit=dev --audit-level=high
 
   test-frontend:
-    image: node
     steps:
       - cd frontend && npm ci && npm test && npm run build && npm audit --omit=dev --audit-level=high
 
   test-fetcher:
-    image: node
     steps:
       - cd functions/fetcher && npm ci && npm test && npm audit --omit=dev --audit-level=high
 
   deploy-fetcher:
-    image: node
     steps:
-      - npm i -g zcatalyst-cli
       - GITHUB_TOKEN="<< env.GITHUB_TOKEN >>" MAX_FORKS="<< env.MAX_FORKS >>" node scripts/inject-fetcher-env.js
       - >-
         catalyst deploy --only functions:fetcher
@@ -51,10 +46,8 @@ jobs:
 
   # --build-path ships the folder as it is, so install the runtime dependencies first.
   deploy-api:
-    image: node
     steps:
       - cd backend && npm ci --omit=dev
-      - npm i -g zcatalyst-cli
       - >-
         catalyst deploy appsail --name leaderboard-api --build-path backend
         --stack node20 --command "node src/server.js"
@@ -63,9 +56,7 @@ jobs:
 
   # Slate bakes the API address into the JavaScript at build time, so this runs after the API is up.
   deploy-web:
-    image: node
     steps:
-      - npm i -g zcatalyst-cli
       - echo "VITE_API_BASE=<< env.DEV_API_URL >>" > frontend/.env.production
       - node scripts/relink-slate.js
       - >-
@@ -75,7 +66,6 @@ jobs:
 
   # Health, schema, data, and no X-Powered-By header. Retries while a fresh container starts.
   smoke-dev:
-    image: node
     steps:
       - sh scripts/smoke.sh << env.DEV_API_URL >>
 

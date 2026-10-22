@@ -267,7 +267,7 @@ It also checks `/api/health/schema` and `/api/leaderboard`, retrying while the c
 
 > **Trap: your token is a secret.** `catalyst token:generate` prints a full-access token. Run it in your own terminal, put it straight into the secret, and never paste it into a chat or a log. Revoke old ones with `catalyst token:revoke <id>`.
 >
-> **Why GitHub Actions and not Catalyst Pipelines?** [`catalyst-pipelines.yaml`](catalyst-pipelines.yaml) is the same flow for Catalyst's own Pipelines service, but the Pipelines page was not available in the console used to build this repo, so that file has never run. The GitHub Actions workflow has.
+> **Why GitHub Actions and not Catalyst Pipelines?** [`catalyst-pipelines.yml`](catalyst-pipelines.yml) is the same flow for Catalyst's own Pipelines service, but the Pipelines page was not available in the console used to build this repo, so that file has never run. The GitHub Actions workflow has.
 
 ### 8. Promote to Production, with a human in the loop
 
@@ -375,7 +375,7 @@ Everything here was run against a real Catalyst project unless listed below.
 │   └── relink-slate.js    Fixes the absolute Slate path catalyst.json records
 ├── .github/workflows/     CI/CD: test, deploy, smoke, approve
 ├── catalyst.json          Catalyst project resources
-└── catalyst-pipelines.yaml  Same flow for Catalyst Pipelines (not yet run)
+└── catalyst-pipelines.yml   Same flow for Catalyst Pipelines (not yet run)
 ```
 
 ## Take the challenge

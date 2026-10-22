@@ -27,7 +27,7 @@ Organization
 | **Data center (DC)** | The region your account lives in: US, EU, IN, AU, CA, SA, JP or UAE. | Our URLs ended in `.catalystappsail.in` |
 | **ZAID** | A project's unique identifier, used in service URLs. Different in Development and Production. | The number in the AppSail URL |
 | **Console** | The web UI for creating projects, tables and settings. | Some steps, like table columns, are console-only |
-| **CLI** | `catalyst`, the tool that deploys everything. Every command has a non-interactive `-ni` mode for agents and CI. | `catalyst-pipelines.yaml` |
+| **CLI** | `catalyst`, the tool that deploys everything. Every command has a non-interactive `-ni` mode for agents and CI. | `catalyst-pipelines.yml` |
 
 ### Local, Development, Production
 
@@ -167,21 +167,21 @@ You create the pool and schedule in the console (or through the MCP).
 
 ### Pipelines
 
-CI/CD defined in a YAML file named `catalyst-pipelines.yaml`. The pieces:
+CI/CD defined in a YAML file named `catalyst-pipelines.yml` (the console creates and reads that extension). The pieces:
 
 | Key | Meaning |
 | --- | --- |
 | `runners` | VM size: config 1 (low), 2 (medium, the default), 3 (high) |
-| `images` | The container a job runs in. Default is Ubuntu with the Catalyst CLI preinstalled |
+| `images` | The container a job runs in. Default is Ubuntu with the Catalyst CLI preinstalled. Every entry you add needs registry credentials (`auth`), even for public images, so this repo leaves it out |
 | `jobs` | A named list of `steps`, which are shell commands |
-| `stages` | Ordered phases containing jobs. At most 5 stages, at most 5 jobs per stage |
+| `stages` | Ordered phases containing jobs. At most 5 stages, at most 5 jobs per stage, and at most 2 in parallel on this account |
 | `pipeline-when`, `when` | Conditions, for example run only on `refs/heads/main` |
 | `approve` job | Pauses the run until a reviewer approves by email |
 | `<< env.NAME >>` | A pipeline variable set in the console, which is where secrets belong |
 
 Nested lists in `jobs` run **in parallel**. Shell state such as `cd` persists between steps of a job.
 
-**In this repo:** [`catalyst-pipelines.yaml`](catalyst-pipelines.yaml) runs three test jobs in parallel, deploys to Development, smoke-tests, waits for approval, then targets Production.
+**In this repo:** [`catalyst-pipelines.yml`](catalyst-pipelines.yml) runs the tests (two in parallel, then one), deploys the fetcher and API in parallel and then the frontend to Development, and smoke-tests. Promotion to Production is not wired up.
 
 ### The rest of the platform
 

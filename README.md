@@ -34,6 +34,8 @@ This is the demo repo for the *"AI Agent se Production tak"* video from **TrainW
 | Keep Dev and Production apart | **Environments** | [Dev vs Production](#development-vs-production) |
 | Let an AI agent work safely | **MCP + CLI** | [Working with an AI agent](#working-with-an-ai-agent) |
 
+**Want your own copy?** Follow [DEPLOY.md](DEPLOY.md): fork, create a Catalyst project, deploy, and set up CI, with every command in order.
+
 **New to Catalyst?** Read [LEARN.md](LEARN.md) first. It explains the concepts from scratch, using this repo as the example.
 
 ## See it running
@@ -145,7 +147,7 @@ Open <http://localhost:5173>. Run the tests with `npm test` in `backend/`, `fron
 
 ## Build it on Catalyst: step by step
 
-The chapters follow the video. Each one has the commands, what you should see, and the traps we actually fell into.
+The chapters follow the video. Each one has the commands, what you should see, and the traps we actually fell into. For a single start-to-finish checklist you can follow on a fork, use [DEPLOY.md](DEPLOY.md).
 
 > **Students:** sign up through [catalyst.zoho.com/students](https://catalyst.zoho.com/students) to use Catalyst for free.
 
@@ -160,7 +162,7 @@ catalyst init --org <your-org> -p <your-project-id> -ni
 
 `init` writes `.catalystrc` (gitignored). The CLI cannot create a project non-interactively, so create it once in the [console](https://console.catalyst.zoho.com).
 
-> **Trap: data center.** Your account lives in one data center (this project: **India**) and every URL depends on it: `.catalystappsail.in`, `.onslate.in`. The CLI defaults to US. Pass `--dc in` when you use a token, and check the suffix of the URL a deploy prints.
+> **Trap: data center.** Your account lives in one data center (this project: **India**) and every URL depends on it: `.catalystappsail.in`, `.onslate.in`. The CLI defaults to US. Pass `--dc <your-dc>` when you use a token (in CI this is the `CATALYST_DC` variable), and check the suffix of the URL a deploy prints.
 
 ### 2. Connect the AI agent: MCP and Agent Skills
 
@@ -249,7 +251,9 @@ test (3 in parallel) → deploy to Development → smoke test → human approval
 | --- | --- | --- |
 | Secret | `CATALYST_TOKEN` | CLI token from `catalyst token:generate` |
 | Variables | `CATALYST_ORG`, `PROJECT_ID` | Where to deploy |
-| Variables | `DEV_API_URL`, `PROD_API_URL` | AppSail URLs baked into the Slate build |
+| Variable | `CATALYST_DC` | Your data center: `us`, `eu`, `in` or `au` (defaults to `us`) |
+| Variable | `PROD_API_URL` | Production AppSail URL; `deploy-prod` is skipped until it is set |
+| Variable | `DEV_API_URL` | Optional fallback; the deploy reads the AppSail URL from its own output |
 | Environment | `production` | Add a **required reviewer**: the run pauses there until they approve |
 
 The smoke test is a script you can run anywhere:

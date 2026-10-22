@@ -2,7 +2,8 @@
 #
 # Setup (repo Settings):
 #   Secret    CATALYST_TOKEN   CLI token             (catalyst token:generate)
-#   Variables CATALYST_ORG, PROJECT_ID, DEV_API_URL, PROD_API_URL (leave empty until Production exists)
+#   Variables CATALYST_ORG, PROJECT_ID, CATALYST_DC (us, eu, in or au), PROD_API_URL (leave unset until Production exists)
+#             DEV_API_URL is optional: the deploy reads the AppSail URL from its own output.
 #   Environments: `development` (no rules) and `production` with a required reviewer.
 name: deploy
 
@@ -21,7 +22,7 @@ concurrency:
 env:
   CATALYST_FLAGS: >-
     --project ${{ vars.PROJECT_ID }} --org ${{ vars.CATALYST_ORG }}
-    --token ${{ secrets.CATALYST_TOKEN }} --dc in -ni
+    --token ${{ secrets.CATALYST_TOKEN }} --dc ${{ vars.CATALYST_DC || 'us' }} -ni
 
 jobs:
   test:
@@ -48,6 +49,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     environment: development
+    outputs:
+      api_url: ${{ steps.api.outputs.url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -56,13 +59,21 @@ jobs:
       - run: npm i -g zcatalyst-cli
       - name: Fetcher
         run: catalyst deploy --only functions:fetcher $CATALYST_FLAGS
+      # The deploy prints the service URL. Read it here so a fresh fork needs no DEV_API_URL up front;
+      # the DEV_API_URL variable is only a fallback if the output format ever changes.
       - name: API
+        id: api
+        shell: bash
         run: |
           docker build --platform linux/amd64 -t leaderboard-api:ci backend
-          catalyst deploy appsail --name leaderboard-api --source docker://leaderboard-api:ci --port 9000 $CATALYST_FLAGS
+          catalyst deploy appsail --name leaderboard-api --source docker://leaderboard-api:ci --port 9000 $CATALYST_FLAGS | tee deploy.log
+          URL=$(grep -aoE 'https://[A-Za-z0-9._:/-]*catalystappsail[A-Za-z0-9._:/-]*' deploy.log | head -1 || true)
+          echo "url=${URL:-${{ vars.DEV_API_URL }}}" >> "$GITHUB_OUTPUT"
       - name: Web
         run: |
-          echo "VITE_API_BASE=${{ vars.DEV_API_URL }}" > frontend/.env.production
+          API_URL="${{ steps.api.outputs.url }}"
+          [ -n "$API_URL" ] || { echo "::error::Could not find the AppSail URL. Set the DEV_API_URL variable."; exit 1; }
+          echo "VITE_API_BASE=$API_URL" > frontend/.env.production
           node scripts/relink-slate.js
           catalyst deploy slate leaderboard-web -m "ci ${{ github.sha }}" $CATALYST_FLAGS
 
@@ -71,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: sh scripts/smoke.sh "${{ vars.DEV_API_URL }}"
+      - run: sh scripts/smoke.sh "${{ needs.deploy-dev.outputs.api_url }}"
 
   # Skipped until PROD_API_URL is set. The `production` environment's required reviewer
   # is the human approval: the run pauses here until they approve.

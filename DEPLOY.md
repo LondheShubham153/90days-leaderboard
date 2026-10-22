@@ -55,8 +55,8 @@ You will collect these values as you go. Write them down.
 
 | Value | Where it comes from | Used in |
 | --- | --- | --- |
-| `ORG_ID` | `catalyst project:list` | step 2, CI |
-| `PROJECT_ID` | `catalyst project:list` | step 2, CI |
+| `ORG_ID` | the console address bar, or `catalyst project:list` ([step 2](#2-create-the-catalyst-project-and-link-the-cli)) | step 2, CI |
+| `PROJECT_ID` | the console address bar, or `catalyst project:list` | step 2, CI |
 | `DC` | your data center (`in`, `us`, ...) | steps 2 and 10 |
 | `API_URL` | printed by the AppSail deploy (step 6) | steps 7, 8 |
 | `WEB_URL` | printed by the Slate deploy (step 7) | sharing |
@@ -92,15 +92,38 @@ The CLI cannot create a project non-interactively, so create it in the console:
 1. Open the console for your DC (see the table above) and sign in.
 2. Create a new project. Any name works; this guide uses `leaderboard`.
 
-Then log in and link this folder to it:
+Then log in and check who you are:
 
 ```bash
 catalyst login --dc <us|eu|in|au|ca|sa|jp|uae>   # opens a browser
-catalyst project:list                            # shows ORG_ID and PROJECT_ID
+catalyst whoami                                  # prints the email you are logged in as
+```
+
+### Find your two IDs
+
+**Easiest: the console address bar.** Open your project in the console. The URL contains both IDs:
+
+```text
+https://console.catalyst.zoho.<dc>/baas/<ORG_ID>/project/<PROJECT_ID>/Development#/...
+```
+
+**Or ask the CLI**, in a normal terminal:
+
+```bash
+catalyst project:list
+```
+
+It asks you to pick your org with the arrow keys (so it will not work through an AI agent or a script). The number in brackets is your **`ORG_ID`**, for example `Shubham (60088008769)`. The table that follows lists each **`PROJECT_ID`**. Once you know the org ID, `catalyst project:list --org <ORG_ID> -ni` prints the table with no prompt.
+
+Your own account (user) ID is a different number and is never used here.
+
+### Link the folder to the project
+
+```bash
 catalyst init --org <ORG_ID> --project <PROJECT_ID> -ni
 ```
 
-`project:list` first asks you to pick your org with the arrow keys, so run it in a normal terminal, not through an AI agent or a script. The number in brackets is your **`ORG_ID`**, for example `Shubham (60088008769)`. Note that your own account (user) ID is a different number and is never used here. Once you know the org ID you can skip the prompt: `catalyst project:list --org <ORG_ID> -ni`.
+With several projects, `catalyst project:use <name-or-project-id>` switches the active one for this folder.
 
 `init` writes `.catalystrc` in the repo root. It is gitignored: it holds your IDs, so never commit it.
 
@@ -445,6 +468,55 @@ To stop using Catalyst resources, remove them in this order. **The CLI cannot de
 | The project itself | Console. Only if it holds nothing else you need. |
 
 Also revoke the CLI token (`catalyst token:revoke <id>`) and delete the `CATALYST_TOKEN` secret.
+
+---
+
+## Command cheat sheet
+
+Replace the `<...>` values with yours. Set `REPO=<your-github-user>/90days-leaderboard` once for the `gh` lines.
+
+### Catalyst CLI
+
+| I want to... | Command |
+| --- | --- |
+| Log in to a data center | `catalyst login --dc in` |
+| Check who I am logged in as | `catalyst whoami` |
+| List my projects and org | `catalyst project:list` (normal terminal) or `catalyst project:list --org <ORG_ID> -ni` |
+| Switch the active project | `catalyst project:use <name-or-project-id>` |
+| Link this folder to a project | `catalyst init --org <ORG_ID> --project <PROJECT_ID> -ni` |
+| Deploy the function | `catalyst deploy --only functions:fetcher -ni` |
+| Deploy the API | `docker build --platform linux/amd64 -t leaderboard-api:v1 backend` then `catalyst deploy appsail --name leaderboard-api --source docker://leaderboard-api:v1 --port 9000 -ni` |
+| Deploy the site to Development | `node scripts/relink-slate.js && catalyst deploy slate leaderboard-web -ni; git checkout catalyst.json` |
+| Deploy the site to Production | `node scripts/relink-slate.js && catalyst deploy slate leaderboard-web --production -ni; git checkout catalyst.json` |
+| Run the sync once on my machine | `catalyst functions:execute fetcher --key test_job -ni` |
+| Make, list or revoke a CLI token | `catalyst token:generate`, `catalyst token:list`, `catalyst token:revoke <id>` |
+| See the CLI's settings | `catalyst config:list` |
+| Save the project as an IaC template | `catalyst iac:export -ni`, then `catalyst iac:status export` |
+
+The site deploys read `frontend/.env.production`, which must hold `VITE_API_BASE=<the API URL for that environment>` (steps 7 and 11).
+
+### Check that it works
+
+| I want to... | Command |
+| --- | --- |
+| Run all the checks at once | `sh scripts/smoke.sh <API_URL>` |
+| Is the API up? | `curl -s <API_URL>/api/health` |
+| Does the table match the code? | `curl -s <API_URL>/api/health/schema` |
+| Is there any data? | `curl -s <API_URL>/api/stats` |
+
+### GitHub CLI
+
+| I want to... | Command |
+| --- | --- |
+| Fork and clone | `gh repo fork TrainWithShubham/90days-leaderboard --clone` |
+| Set the CLI token secret | `gh secret set CATALYST_TOKEN -R $REPO` (paste at the prompt) |
+| Set or list variables | `gh variable set CATALYST_DC -R $REPO -b "in"`, `gh variable list -R $REPO` |
+| List secrets (names only) | `gh secret list -R $REPO` |
+| Start the pipeline by hand | `gh workflow run deploy.yml -R $REPO --ref main` |
+| See recent runs | `gh run list -R $REPO -L 5` |
+| Watch a run | `gh run watch <run-id> -R $REPO` |
+| Re-run only what failed | `gh run rerun <run-id> -R $REPO --failed` |
+| Approve a Production deploy | In GitHub: **Actions**, open the waiting run, **Review deployments** |
 
 ---
 

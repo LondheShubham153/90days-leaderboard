@@ -25,3 +25,10 @@ check() {
 check /api/health
 check /api/health/schema   # 503 with the missing columns if the table drifted
 check /api/leaderboard
+
+# The API must not advertise its framework (helmet + app.disable('x-powered-by')).
+if curl -sSI -m 15 "$base/api/health" | grep -qi '^x-powered-by'; then
+  echo "FAIL /api/health sends an X-Powered-By header" >&2
+  exit 1
+fi
+echo "ok   no X-Powered-By header"

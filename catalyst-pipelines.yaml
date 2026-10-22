@@ -1,14 +1,16 @@
-# test -> deploy to Development -> smoke test -> human approval -> Production
+# test -> deploy to Development -> verify
 #
-# Nothing reaches Production until a person approves the `approve-production` job.
-#
-# Pipeline variables (console -> Pipelines -> your pipeline -> Variables; mark the token secret):
-#   CATALYST_TOKEN  CLI token             (catalyst token:generate)
+# Pipeline variables (console -> Pipelines -> your pipeline -> Variables; mark the two tokens secret):
+#   CATALYST_TOKEN  CLI token (secret)      catalyst token:generate
 #   CATALYST_ORG    org ID
+#   CATALYST_DC     data center: us, eu, in or au
 #   PROJECT_ID      project ID
-#   REVIEWER_EMAIL  who approves Production
 #   DEV_API_URL     https://leaderboard-api-<zaid>.development.catalystappsail.<dc>
-#   PROD_API_URL    https://leaderboard-api-<zaid>.catalystappsail.<dc>
+#   GITHUB_TOKEN    GitHub token for the fetcher (secret); a fine-grained token with public read-only access is enough
+#   MAX_FORKS       how many forks one sync reads, e.g. 50
+#
+# Why GITHUB_TOKEN and MAX_FORKS live here: a deploy replaces the function's variables with the ones in
+# catalyst-config.json. scripts/inject-fetcher-env.js fills that file in on the runner so they survive.
 version: 1.0
 
 pipeline-when:
@@ -21,65 +23,76 @@ images:
     image: node:20
 
 jobs:
+  # Tests and the dependency audit gate every deploy. The audit looks at what ships, not at dev tooling.
   test-backend:
     image: node
     steps:
-      - cd backend && npm ci && npm test
+      - cd backend && npm ci && npm test && npm audit --omit=dev --audit-level=high
 
   test-frontend:
     image: node
     steps:
-      - cd frontend && npm ci && npm test && npm run build
+      - cd frontend && npm ci && npm test && npm run build && npm audit --omit=dev --audit-level=high
 
   test-fetcher:
     image: node
     steps:
-      - cd functions/fetcher && npm ci && npm test
+      - cd functions/fetcher && npm ci && npm test && npm audit --omit=dev --audit-level=high
 
-  deploy-dev:
+  deploy-fetcher:
+    image: node
+    steps:
+      - npm i -g zcatalyst-cli
+      - GITHUB_TOKEN="<< env.GITHUB_TOKEN >>" MAX_FORKS="<< env.MAX_FORKS >>" node scripts/inject-fetcher-env.js
+      - >-
+        catalyst deploy --only functions:fetcher
+        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --dc << env.CATALYST_DC >>
+        --token << env.CATALYST_TOKEN >> -ni
+
+  # --build-path ships the folder as it is, so install the runtime dependencies first.
+  deploy-api:
+    image: node
+    steps:
+      - cd backend && npm ci --omit=dev
+      - npm i -g zcatalyst-cli
+      - >-
+        catalyst deploy appsail --name leaderboard-api --build-path backend
+        --stack node20 --command "node src/server.js"
+        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --dc << env.CATALYST_DC >>
+        --token << env.CATALYST_TOKEN >> -ni
+
+  # Slate bakes the API address into the JavaScript at build time, so this runs after the API is up.
+  deploy-web:
     image: node
     steps:
       - npm i -g zcatalyst-cli
       - echo "VITE_API_BASE=<< env.DEV_API_URL >>" > frontend/.env.production
       - node scripts/relink-slate.js
       - >-
-        catalyst deploy --only functions:fetcher
-        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --token << env.CATALYST_TOKEN >> -ni
-      - >-
-        catalyst deploy appsail --name leaderboard-api --build-path backend
-        --stack node20 --command "node src/server.js"
-        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --token << env.CATALYST_TOKEN >> -ni
-      - >-
         catalyst deploy slate leaderboard-web -m "pipeline build"
-        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --token << env.CATALYST_TOKEN >> -ni
+        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --dc << env.CATALYST_DC >>
+        --token << env.CATALYST_TOKEN >> -ni
 
+  # Health, schema, data, and no X-Powered-By header. Retries while a fresh container starts.
   smoke-dev:
     image: node
     steps:
       - sh scripts/smoke.sh << env.DEV_API_URL >>
 
-  # One reviewer, no timeout: the run waits here until they approve or reject.
-  approve-production:
-    type:
-      type-name: approval
-      type-variables:
-        reviewers:
-          - << env.REVIEWER_EMAIL >>
-        message: Development is deployed and the smoke test passed. Approve to promote to Production.
-
-  # Needs a Production environment created in the console first.
-  deploy-prod:
-    image: node
-    steps:
-      - npm i -g zcatalyst-cli
-      - echo "VITE_API_BASE=<< env.PROD_API_URL >>" > frontend/.env.production
-      - node scripts/relink-slate.js
-      - >-
-        catalyst deploy --production
-        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --token << env.CATALYST_TOKEN >> -ni
-      - >-
-        catalyst deploy slate leaderboard-web --production -m "pipeline promote"
-        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --token << env.CATALYST_TOKEN >> -ni
+# Promotion to Production is not wired up on purpose. The CLI used while building this (1.28.0) has no
+# `catalyst deploy --production` flag, so that step could not be verified. Once the Production
+# environment exists and you have a promotion command that works, add a manual approval and a deploy
+# job after `verify`, for example:
+#
+#   approve-production:
+#     type:
+#       type-name: approval
+#       type-variables:
+#         reviewers:
+#           - << env.REVIEWER_EMAIL >>
+#         message: Development is deployed and verified. Approve to promote to Production.
+#
+# Production also needs its own GITHUB_TOKEN, MAX_FORKS, job pool, cron and CORS_ORIGIN.
 
 stages:
   - name: test
@@ -89,13 +102,9 @@ stages:
         - test-fetcher
   - name: deploy-dev
     jobs:
-      - deploy-dev
+      - - deploy-fetcher
+        - deploy-api
+      - deploy-web
   - name: verify
     jobs:
       - smoke-dev
-  - name: approval
-    jobs:
-      - approve-production
-  - name: production
-    jobs:
-      - deploy-prod

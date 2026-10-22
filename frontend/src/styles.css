@@ -53,24 +53,25 @@ a:hover { color: var(--amber); }
 
 /* ---------- masthead ---------- */
 .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.brand { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; }
-.brand img { display: block; }
-.brand span {
-  font: italic 800 15px/1 var(--display);
-  font-stretch: 112%;
+.brand { display: inline-block; line-height: 0; }
+/* the logo has a black square behind it; `screen` makes the black vanish into the page */
+.brand img { display: block; width: clamp(96px, 14vw, 124px); height: auto; mix-blend-mode: screen; }
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1.5px solid var(--amber);
+  border-radius: 999px;
+  color: var(--amber);
+  font: 700 14px/1 var(--body);
   letter-spacing: 0.04em;
-  text-transform: uppercase;
+  transition: background 0.15s, color 0.15s;
 }
-.tag {
-  background: var(--purple);
-  color: #fff;
-  font: 700 12px/1 var(--body);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  padding: 9px 14px;
-}
+.cta:hover { background: var(--amber); color: var(--ink); }
 
-.hero { position: relative; padding: 46px 0 8px; min-height: 300px; }
+.hero { position: relative; padding: 30px 0 8px; min-height: 300px; }
 .orbit { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .rocket {
   position: absolute;
@@ -254,20 +255,15 @@ input[type='search']:focus-visible { outline: 2px solid var(--amber); outline-of
 
 /* ---------- footer ---------- */
 footer {
-  display: flex;
-  align-items: center;
-  gap: 24px;
   margin-top: 48px;
-  padding-top: 28px;
+  padding-top: 24px;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 14px;
 }
-footer p { margin: 0 0 8px; max-width: 58ch; }
+footer p { margin: 0 0 8px; max-width: 62ch; }
 footer a { color: var(--lift); font-weight: 700; }
 footer a:hover { color: var(--amber); }
-/* the logo has a black square behind it; `screen` makes the black vanish into the page */
-.lockup { flex: none; mix-blend-mode: screen; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(14px); }
@@ -278,8 +274,9 @@ footer a:hover { color: var(--amber); }
 }
 
 @media (max-width: 720px) {
-  .hero { padding-top: 70px; min-height: 0; }
+  .hero { padding-top: 56px; min-height: 0; }
   .rocket { top: 0; width: 96px; }
+  .cta { font-size: 13px; padding: 0 16px; }
   h1 em { letter-spacing: 0.32em; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .stats dd { font-size: 36px; }
@@ -299,7 +296,6 @@ footer a:hover { color: var(--amber); }
   .board li { grid-template-columns: 34px 38px minmax(0, 1fr) 52px 54px; gap: 10px; padding: 10px; }
   .board li .strip { display: none; }
   .avatar { width: 38px; height: 38px; }
-  footer { flex-direction: column; align-items: flex-start; }
 }
 
 @media (prefers-reduced-motion: reduce) {

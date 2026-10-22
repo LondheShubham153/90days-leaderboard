@@ -120,7 +120,8 @@ The tokens live at the top of [`frontend/src/styles.css`](frontend/src/styles.cs
 - **Fonts:** [Archivo](https://fonts.google.com/specimen/Archivo) (display, expanded italic) and [Barlow](https://fonts.google.com/specimen/Barlow) (body), loaded in [`frontend/index.html`](frontend/index.html).
 - **Phones:** below 720px the podium becomes a ranked list with the leader first, and the progress strips are hidden.
 - **Motion:** the entrance animations and the drifting rocket stop under `prefers-reduced-motion`.
-- **Logo files:** `frontend/public/rocket.png` (the monogram, transparent background) and `tws-logo.png` (the full lockup, which has a black square that `mix-blend-mode: screen` hides on the dark page).
+- **Logo files:** `frontend/public/rocket.png` (the monogram, transparent background, used for the favicon and the hero) and `tws-logo.png` (the full lockup, cropped to the artwork and shown at the top; its black square is hidden on the dark page with `mix-blend-mode: screen`).
+- **Links out:** the header button and the footer both point at the [90DaysOfDevOps challenge repo](https://github.com/TrainWithShubham/90DaysOfDevOps).
 
 > **Testing a phone layout in headless Chrome:** its minimum window is about 500px wide, so a 390px capture shows a cropped 500px layout. Load the page in a 390px `<iframe>` instead to see the real mobile layout.
 

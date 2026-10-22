@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { fetchLeaderboard, fetchStats } from './api.js';
 
 const CHALLENGE_DAYS = 90;
+const CHALLENGE_REPO = 'https://github.com/TrainWithShubham/90DaysOfDevOps';
 
 function useLeaderboard() {
   const [state, setState] = useState({ status: 'loading', learners: [], stats: null });
@@ -115,11 +116,12 @@ export default function App() {
     <main>
       <header className="masthead">
         <div className="bar">
-          <a className="brand" href="https://github.com/TrainWithShubham" target="_blank" rel="noreferrer">
-            <img src="/rocket.png" alt="" width="40" height="40" />
-            <span>TrainWithShubham</span>
+          <a className="brand" href="https://github.com/TrainWithShubham" target="_blank" rel="noreferrer" aria-label="TrainWithShubham on GitHub">
+            <img src="/tws-logo.png" alt="TWS, Happy Learning" width="124" height="119" />
           </a>
-          <span className="tag">Happy learning</span>
+          <a className="cta" href={CHALLENGE_REPO} target="_blank" rel="noreferrer">
+            Join the 90DaysOfDevOps challenge <span aria-hidden="true">↗</span>
+          </a>
         </div>
 
         <div className="hero">
@@ -184,16 +186,18 @@ export default function App() {
       )}
 
       <footer>
-        <img className="lockup" src="/tws-logo.png" alt="TWS, Happy Learning" width="132" height="132" loading="lazy" />
-        <div>
-          <p>
-            Score = 10 per active day + 5 per streak day + commits (max 3/day). Synced from learners' forks of
-            TrainWithShubham/90DaysOfDevOps.
-          </p>
-          <a href="https://github.com/TrainWithShubham/90days-leaderboard" target="_blank" rel="noreferrer">
-            Fork it, add a feature, share it ↗
+        <p>
+          Score = 10 per active day + 5 per streak day + commits (max 3/day). Synced from learners' forks of{' '}
+          <a href={CHALLENGE_REPO} target="_blank" rel="noreferrer">
+            TrainWithShubham/90DaysOfDevOps
           </a>
-        </div>
+          .
+        </p>
+        <p>
+          <a href="https://github.com/TrainWithShubham/90days-leaderboard" target="_blank" rel="noreferrer">
+            Fork this leaderboard, add a feature, share it ↗
+          </a>
+        </p>
       </footer>
     </main>
   );

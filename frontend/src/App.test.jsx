@@ -53,6 +53,14 @@ test('shows an error with retry when the API is down', async () => {
   await waitFor(() => expect(screen.getByLabelText('Top three learners')).toBeInTheDocument());
 });
 
+test('links to the 90DaysOfDevOps challenge repo and shows the TWS logo', async () => {
+  render(<App />);
+  await screen.findByLabelText('Top three learners');
+  const cta = screen.getByRole('link', { name: /join the 90daysofdevops challenge/i });
+  expect(cta).toHaveAttribute('href', 'https://github.com/TrainWithShubham/90DaysOfDevOps');
+  expect(screen.getByAltText('TWS, Happy Learning')).toBeInTheDocument();
+});
+
 test('ProgressStrip describes progress for screen readers', () => {
   render(<ProgressStrip days={45} />);
   expect(screen.getByRole('img')).toHaveAttribute('aria-label', '45 of 90 days active');

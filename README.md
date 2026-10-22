@@ -2,7 +2,7 @@
 
 # #90DaysOfDevOps Leaderboard
 
-**A live leaderboard for the #90DaysOfDevOps community, built on [Catalyst by Zoho](https://catalyst.zoho.com).**
+**A three-tier app on [Catalyst by Zoho](https://catalyst.zoho.com), built by an AI agent and shipped to Production by a human.**
 It reads learners' GitHub activity, stores it, and ranks who is consistent and who is on a streak.
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-c6ff3d?style=flat-square)
@@ -13,32 +13,52 @@ It reads learners' GitHub activity, stores it, and ranks who is consistent and w
 
 <img src="docs/screenshot.png" alt="The leaderboard: podium for the top three, stats strip, and a full standings table with 90-day progress strips" width="760">
 
-*Screenshot uses the built-in demo data, not real learners.*
+*Demo data, so no real learners appear here. The deployed site uses live GitHub data.*
 
 </div>
 
 ---
 
-## Why this repo exists
+## What this repo teaches
 
-AI agents can write an app in minutes. Getting it safely to production is the hard part: hosting, a database, containers, a pipeline, and a person deciding what goes live.
+This is the demo repo for the *"AI Agent se Production tak"* video from **TrainWithShubham**. It is also a worked example for anyone learning Catalyst: every service below is used by real code in this repo, and every command in this README was run for real.
 
-This project is a complete, real example of that path on one platform:
+| You want to learn | Catalyst service | Where it lives here |
+| --- | --- | --- |
+| Store data and query it | **Data Store** | [`backend/schema.json`](backend/schema.json), [`backend/src/store/catalyst.js`](backend/src/store/catalyst.js) |
+| Run short background code | **Functions** (Job) | [`functions/fetcher/`](functions/fetcher) |
+| Run an always-on API in a container | **AppSail** | [`backend/Dockerfile`](backend/Dockerfile) |
+| Host a React frontend | **Slate** | [`frontend/`](frontend) |
+| Run code on a timer | **Job Scheduling** | [`infra/project-template.json`](infra/project-template.json) |
+| Test, deploy and gate Production | CI/CD | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) |
+| Keep Dev and Production apart | **Environments** | [Dev vs Production](#development-vs-production) |
+| Let an AI agent work safely | **MCP + CLI** | [Working with an AI agent](#working-with-an-ai-agent) |
 
-- an **AI coding agent** builds in the **Development** environment only,
-- **CI** tests every push,
-- the backend ships as a **Docker container** on AppSail, the frontend on Slate, the data in Data Store,
-- a **human approves** before anything reaches Production.
+**New to Catalyst?** Read [LEARN.md](LEARN.md) first. It explains the concepts from scratch, using this repo as the example.
 
-It is the demo repo for the *"AI Agent se Production tak"* video from **TrainWithShubham**.
+## See it running
 
-**New to Catalyst?** Read [LEARN.md](LEARN.md), a guide to the core concepts and main services that uses this repo as its worked example.
+The Production site, built from this repo and deployed to Catalyst (India data center):
+
+- **Site:** <https://leaderboard-web-jkeyorhq.onslate.in>
+- **API health:** <https://leaderboard-api-50045941872.catalystappsail.in/api/health>
+
+<img src="docs/screenshots/production-stats.png" alt="Top of the production site showing 24 learners, 143 commits, a 16 day best streak, and 2 learners on a streak" width="760">
+
+*A real capture of the Production deployment. The standings below it are cropped out to keep learners' profiles private.*
+
+A push to `main` runs tests, deploys to Development, smoke-tests it, and then waits for a person before Production:
+
+<img src="docs/screenshots/ci-run.png" alt="GitHub Actions run: three test jobs, deploy-dev, smoke-dev all green, deploy-prod skipped" width="760">
+
+*The first end-to-end run: about two minutes. `deploy-prod` is skipped until the `PROD_API_URL` variable is set.*
 
 ## How it works
 
 ```mermaid
 flowchart LR
     GH[("GitHub<br/>learners' forks of<br/>90DaysOfDevOps")] -->|commits| JOB
+    CRON(["Job Scheduling<br/>every 30 min"]) --> JOB
     subgraph Catalyst by Zoho
         JOB["Job function<br/><b>fetcher</b>"] -->|upsert| DS[("Data Store<br/>Learners")]
         API["AppSail<br/><b>Express API</b><br/>Docker container"] -->|ZCQL| DS
@@ -61,6 +81,32 @@ flowchart LR
 
 Days are IST calendar days. A streak stays alive through yesterday, so it only resets after a full missed day.
 
+## Development vs Production
+
+Catalyst gives a project separate **environments**. Each has its own URLs, its own data and its own copy of every service.
+
+```mermaid
+flowchart LR
+    A["AI agent<br/>+ you"] -->|deploys| DEV
+    subgraph DEV["Development"]
+        D1["AppSail · Slate · Function"] --- D2[("Learners<br/>own data")]
+    end
+    DEV -->|"human approves"| PROD
+    subgraph PROD["Production"]
+        P1["AppSail · Slate · Function"] --- P2[("Learners<br/>own data")]
+    end
+```
+
+What that looked like in this project:
+
+| | Development | Production |
+| --- | --- | --- |
+| API URL | `leaderboard-api-<id>.development.catalystappsail.in` | `leaderboard-api-<id>.catalystappsail.in` |
+| Slate URL | `leaderboard-web-<hash>.onslate.in` | a different `<hash>` |
+| Learners right after promotion | 13 | **0**: the table existed but had no rows |
+
+Promoting to Production copied the services and the empty table, not the data. We had to run the sync in Production on its own. The Slate app was not promoted either and needed its own `catalyst deploy slate --production`.
+
 ## Quick start (no Catalyst account needed)
 
 The API ships with an in-memory store, so you can run the whole app locally.
@@ -77,34 +123,38 @@ npm ci
 npm run dev
 ```
 
-Open <http://localhost:5173>.
+Open <http://localhost:5173>. Run the tests with `npm test` in `backend/`, `frontend/` and `functions/fetcher/`.
 
-## Tests
+## Build it on Catalyst: step by step
 
-```bash
-(cd backend && npm test)            # API, schema checks
-(cd frontend && npm test)           # components, filtering, error state
-(cd functions/fetcher && npm test)  # scoring and streak logic
-```
-
-## Deploy to Catalyst
+The chapters follow the video. Each one has the commands, what you should see, and the traps we actually fell into.
 
 > **Students:** sign up through [catalyst.zoho.com/students](https://catalyst.zoho.com/students) to use Catalyst for free.
 
-**Prerequisites:** a Catalyst project, Node 20+, Docker, and the CLI (`npm i -g zcatalyst-cli`).
-
-### 1. Log in and link your project
+### 1. Set up: account, CLI, project
 
 ```bash
+npm i -g zcatalyst-cli
 catalyst login
-catalyst init --org <your-org> -p <your-project-id> -ni   # creates .catalystrc
+catalyst project:list          # note your org and project ID
+catalyst init --org <your-org> -p <your-project-id> -ni
 ```
 
-Create the project once in the [Catalyst console](https://console.catalyst.zoho.com) first. The CLI cannot create projects non-interactively.
+`init` writes `.catalystrc` (gitignored). The CLI cannot create a project non-interactively, so create it once in the [console](https://console.catalyst.zoho.com).
 
-### 2. Create the Data Store table
+> **Trap: data center.** Your account lives in one data center (this project: **India**) and every URL depends on it: `.catalystappsail.in`, `.onslate.in`. The CLI defaults to US. Pass `--dc in` when you use a token, and check the suffix of the URL a deploy prints.
 
-Catalyst can only create columns from the console, so [`backend/schema.json`](backend/schema.json) is the source of truth. In **Data Store → Create Table**, make a table named `Learners` (case-sensitive):
+### 2. Connect the AI agent: MCP and Agent Skills
+
+Catalyst's MCP server is per data center. For India, point the plugin at `https://catalyst.zohomcp.in/mcp/message` (the plugin's `switch-dc` command does this), restart your agent, then approve the browser login.
+
+> **Trap: the OAuth callback.** After you approve, the browser redirects to `http://localhost:<port>/callback?...` and shows "This site can't be reached". That is normal. Copy the **full URL from the address bar** and give it to your agent in the **same session**. If you restart first, the login state is gone and you must start over.
+
+Check the agent and the CLI agree on the project before you let the agent change anything: ask for the project by ID through the MCP and compare it with `.catalystrc`.
+
+### 3. The database: Data Store
+
+[`backend/schema.json`](backend/schema.json) is the source of truth. In the console, **Data Store → Create Table** named `Learners` (case-sensitive):
 
 | Column | Type | Max length |
 | --- | --- | --- |
@@ -118,56 +168,58 @@ Catalyst can only create columns from the console, so [`backend/schema.json`](ba
 | `last_active` | Var Char | 255 |
 | `days` | Text | |
 
-Don't add `ROWID`, `CREATORID`, `CREATEDTIME` or `MODIFIEDTIME`; Catalyst adds them.
+Do not add `ROWID`, `CREATORID`, `CREATEDTIME` or `MODIFIEDTIME`; Catalyst adds them.
 
-### 3. Deploy the three tiers
+> **Trap: a table is not a schema.** Our first deploy returned `Unknown Table Learners or Unknown Column login` because the table existed with only the system columns. That is why the API has `/api/health/schema`: it compares the live table with `schema.json` and returns `503` with the missing columns.
+
+### 4. The backend on AppSail, as a Docker container
 
 ```bash
-# Fetcher (Job function)
-catalyst deploy --only functions:fetcher -ni
-
-# API: build for linux/amd64 (AppSail rejects ARM images), then deploy the container
+# AppSail only accepts linux/amd64. On an Apple Silicon Mac this flag is required.
 docker build --platform linux/amd64 -t leaderboard-api:v1 backend
 catalyst deploy appsail --name leaderboard-api --source docker://leaderboard-api:v1 --port 9000 -ni
+```
 
-# Frontend: bake in the API URL, point Slate at this checkout, deploy
+You should see `✔ Catalyst AppSail Deploy completed successfully` and the service URL. The app must listen on the port in `X_ZOHO_CATALYST_LISTEN_PORT`; [`server.js`](backend/src/server.js) reads it.
+
+> **Trap: the first minute.** A fresh container takes about a minute to start. Until then you will see `AppSail is disabled` or `Execution failed`. Wait, then retry.
+>
+> **Trap: a crash on start.** One image crashed with `Cannot find module '../schema.json'` because the Dockerfile did not copy it. Run the image locally before you deploy it: `docker run -p 9000:9000 -e STORE=memory leaderboard-api:v1`.
+
+### 5. The frontend on Slate
+
+```bash
 echo "VITE_API_BASE=https://<your-appsail-url>" > frontend/.env.production
 node scripts/relink-slate.js
 catalyst deploy slate leaderboard-web -ni
 ```
 
-The AppSail URL is printed by the deploy and looks like `https://leaderboard-api-<zaid>.development.catalystappsail.<dc>`. A fresh container can take about a minute to start.
+> **Trap: build-time variables.** Vite bakes `VITE_API_BASE` into the JavaScript while it builds. If it was empty or wrong then, the live site says "Can't reach the leaderboard API" until you rebuild and redeploy; editing it afterwards does nothing.
+>
+> **Why `relink-slate.js`?** The CLI records the frontend path in `catalyst.json` as an absolute path. The script rewrites it for your machine, so the committed file can stay portable.
 
-### 4. Check that it works
+### 6. The sync: a Job function and Job Scheduling
 
 ```bash
-sh scripts/smoke.sh https://<your-appsail-url>
+catalyst deploy --only functions:fetcher -ni
 ```
 
-It checks `/api/health`, `/api/health/schema` (does the table match `schema.json`?) and `/api/leaderboard`, retrying while the container starts.
+The schedule is a **job pool** (where jobs run) plus a **cron** (when). Both are written down in [`infra/project-template.json`](infra/project-template.json): pool `leaderboard_sync`, cron `sync_leaderboard`, `*/30 * * * *` in `Asia/Kolkata`.
 
-### 5. Load the first data
+> **Trap: names.** A job pool name allows only letters, numbers and underscores. `leaderboard-sync` was rejected; `leaderboard_sync` worked.
+>
+> **Trap: IDs differ per environment.** When Production got its own copy of the pool, it also got a new ID. A manual run that used the Development pool's ID reported `FAILURE`; use the pool ID of the environment you are in.
+>
+> **Trap: the rate limit.** Without a `GITHUB_TOKEN`, GitHub allows 60 requests an hour, so keep `MAX_FORKS` low (we used 15) or add a token.
 
-Run the fetcher once against your Development environment:
+Load the first data by hand to check it works:
 
 ```bash
-# The CLI needs a Node 20 binary for this local run
-catalyst config:set node20.bin=$(npx -y node@20 -p "process.execPath")
+catalyst config:set node20.bin=$(npx -y node@20 -p "process.execPath")   # the local run needs a Node 20 binary
 MAX_FORKS=15 catalyst functions:execute fetcher --key test_job -ni
 ```
 
-For regular syncs, the `fetcher` function needs a **job pool** and a **cron schedule**. They are defined in [`infra/project-template.json`](infra/project-template.json): a pool named `leaderboard_sync` and a cron job `sync_leaderboard` that runs `*/30 * * * *` (Asia/Kolkata). See [Infrastructure as code](#infrastructure-as-code).
-
-## Infrastructure as code
-
-[`infra/project-template.json`](infra/project-template.json) is a Catalyst IaC template, exported with `catalyst iac:export`. It describes the `fetcher` function settings, the `Learners` table and its columns, the job pool, and the 30-minute cron schedule.
-
-- **It creates a new project.** `catalyst iac:import` builds a fresh project from the template; it does not update an existing one. Use it to stand the whole setup up again, or to review what the schedule is.
-- **Not covered:** AppSail and Slate do not appear in the export. Deploy them with the commands above.
-- **Not yet tested:** the template comes from a real export, but `iac:import` has not been run against it.
-- **Changing the schedule:** edit it in the console (Job Scheduling), then run `catalyst iac:export -ni` and `catalyst iac:status export` to refresh the file.
-
-## CI/CD
+### 7. CI/CD: test, deploy, smoke, approve
 
 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) runs on every push to `main`:
 
@@ -177,14 +229,92 @@ test (3 in parallel) → deploy to Development → smoke test → human approval
 
 | Where | Name | Purpose |
 | --- | --- | --- |
-| Secret | `CATALYST_TOKEN` | CLI token (`catalyst token:generate`) |
+| Secret | `CATALYST_TOKEN` | CLI token from `catalyst token:generate` |
 | Variables | `CATALYST_ORG`, `PROJECT_ID` | Where to deploy |
 | Variables | `DEV_API_URL`, `PROD_API_URL` | AppSail URLs baked into the Slate build |
 | Environment | `production` | Add a **required reviewer**: the run pauses there until they approve |
 
-The deploy builds the same Docker image as the manual steps above. The `deploy-prod` job is skipped until `PROD_API_URL` is set, so create the Production environment in the Catalyst console first.
+The smoke test is a script you can run anywhere:
 
-> **Catalyst Pipelines version.** [`catalyst-pipelines.yaml`](catalyst-pipelines.yaml) is the same flow for Catalyst's own Pipelines service. It has not been run: the Pipelines page was not available in the console used to build this repo. The GitHub Actions workflow above is the one to use.
+```console
+$ sh scripts/smoke.sh https://<your-appsail-url>
+ok   /api/health  {"status":"ok","store":"catalyst-datastore"}
+```
+
+It also checks `/api/health/schema` and `/api/leaderboard`, retrying while the container starts.
+
+> **Trap: your token is a secret.** `catalyst token:generate` prints a full-access token. Run it in your own terminal, put it straight into the secret, and never paste it into a chat or a log. Revoke old ones with `catalyst token:revoke <id>`.
+>
+> **Why GitHub Actions and not Catalyst Pipelines?** [`catalyst-pipelines.yaml`](catalyst-pipelines.yaml) is the same flow for Catalyst's own Pipelines service, but the Pipelines page was not available in the console used to build this repo, so that file has never run. The GitHub Actions workflow has.
+
+### 8. Promote to Production, with a human in the loop
+
+1. In the Catalyst console, create the **Production** environment and promote your Development services to it.
+2. Deploy the frontend to Production with its own API URL: `catalyst deploy slate leaderboard-web --production -ni`.
+3. Run the sync once in Production, because the table starts empty.
+4. Set the repo variable `PROD_API_URL`. From then on `deploy-prod` waits for the `production` reviewer.
+
+### 9. Logs, monitoring and debugging
+
+When something breaks, check in this order: the service's own status, then its logs, then the dependency behind it.
+
+```bash
+curl -s https://<your-appsail-url>/api/health/schema    # is the table what the code expects?
+curl -s https://<your-appsail-url>/api/stats            # is there any data at all?
+```
+
+A real example from this project: after the first run in Production, both sync jobs reported `FAILURE` even though rows had been written. The likely cause is GitHub's rate limit stopping the job part-way, but we have not confirmed it, because the function's logs came back empty when queried through the API. Use the **Logs** page in the console for the real evidence.
+
+## Infrastructure as code
+
+[`infra/project-template.json`](infra/project-template.json) is a Catalyst IaC template, exported with `catalyst iac:export`. It describes the `fetcher` function settings, the `Learners` table and its columns, the job pool, and the 30-minute cron schedule.
+
+- **It creates a new project.** `catalyst iac:import` builds a fresh project from the template; it does not update an existing one. Use it to stand the setup up again, or to review what the schedule is.
+- **Not covered:** AppSail and Slate do not appear in the export. Deploy them with the commands above.
+- **Not yet tested:** the template comes from a real export, but `iac:import` has not been run against it.
+- **Refreshing it:** after you change something in the console, run `catalyst iac:export -ni`, then `catalyst iac:status export`, which asks before it downloads the zip.
+
+## Working with an AI agent
+
+The agent did the typing; a person made every decision that was hard to undo.
+
+| The agent did | A person did |
+| --- | --- |
+| Wrote the Express API, the React app and the fetcher, with tests | Chose the project, data center and what to build |
+| Built and ran the Docker image locally before deploying | Approved each browser login (MCP, CLI token) |
+| Deployed to **Development** with the non-interactive CLI (`-ni`) | Created the Data Store table and its columns in the console |
+| Created the job pool and cron through the MCP, then tested one run | Decided to promote to **Production** and clicked it |
+| Wrote the CI workflow and fixed what broke | Held the secrets and the `production` approval |
+
+Two limits we hit are worth knowing before you hand an agent your account:
+
+- **`-ni` has holes.** Deleting a function remotely is refused in non-interactive mode, the CLI cannot create a project non-interactively, and columns can only be added in the console. Those need a person.
+- **Expect a permission check on Production.** The first write to Production was blocked until it was approved explicitly. That is the behavior you want.
+
+## Troubleshooting
+
+| Symptom | Cause and fix |
+| --- | --- |
+| `/api/health/schema` returns `503` | The table is missing columns. The response lists them; add them in the console. |
+| AppSail answers `AppSail is disabled` or `Execution failed` right after a deploy | The container is still starting. Wait a minute and retry. |
+| AppSail rejects the image | It must be `linux/amd64`. Build with `--platform linux/amd64`. |
+| The container exits with `Cannot find module` | A file is missing from the image. Run it locally with `docker run` first. |
+| Slate shows "Can't reach the leaderboard API" | `VITE_API_BASE` was empty or wrong at build time. Rebuild and redeploy. |
+| The production site loads but is empty | Production has its own data. Run the sync there. |
+| `catalyst functions:execute` says Node v20 is missing | Run `catalyst config:set node20.bin=<path to a Node 20 binary>`. |
+| A CLI call with a token fails or hits the wrong region | Add `--dc in` (or your data center). |
+| MCP login ends on "This site can't be reached" | Paste the address-bar URL to the agent in the same session. |
+| A job pool name is rejected | Use only letters, numbers and underscores. |
+| A manual cron run says `FAILURE` in a new environment | Use that environment's own job pool ID. |
+| The sync is slow or stops part-way | Set `GITHUB_TOKEN`, or lower `MAX_FORKS`. |
+
+## Status: what is and is not proven
+
+Everything here was run against a real Catalyst project unless listed below.
+
+- **Not yet confirmed:** that the cron fires on its own. The run counters still showed 0 after the first scheduled times had passed. The manual run in Development succeeded; the two in Production reported `FAILURE` although rows were written (see chapter 9).
+- **Not set:** a `GITHUB_TOKEN`, so the sync is capped at 15 forks per run and about 60 requests an hour. The upstream repo has thousands of forks.
+- **Not run:** the Catalyst Pipelines file, `iac:import`, and the CI approval pause. `deploy-prod` is skipped until `PROD_API_URL` is set.
 
 ## API
 
@@ -220,25 +350,16 @@ The deploy builds the same Docker image as the manual steps above. The `deploy-p
 ├── scripts/
 │   ├── smoke.sh           Post-deploy health and schema check
 │   └── relink-slate.js    Fixes the absolute Slate path catalyst.json records
+├── .github/workflows/     CI/CD: test, deploy, smoke, approve
 ├── catalyst.json          Catalyst project resources
-└── catalyst-pipelines.yaml
+└── catalyst-pipelines.yaml  Same flow for Catalyst Pipelines (not yet run)
 ```
-
-## Troubleshooting
-
-| Symptom | Cause and fix |
-| --- | --- |
-| `/api/health/schema` returns `503` | The table is missing columns. The response lists them; add them in the console. |
-| AppSail answers `AppSail is disabled` or `Execution failed` right after a deploy | The new container is still starting. Wait a minute and retry. |
-| `catalyst functions:execute` says Node v20 is missing | Run `catalyst config:set node20.bin=<path to a Node 20 binary>`. |
-| Slate shows "Can't reach the leaderboard API" | `VITE_API_BASE` was empty or wrong at build time. Rebuild and redeploy. |
-| AppSail rejects the image | It must be `linux/amd64`. Build with `--platform linux/amd64`. |
 
 ## Take the challenge
 
 Fork this repo, add a feature, deploy it on Catalyst, and share it on LinkedIn with **#90DaysOfDevOps** and **#TrainWithShubham**.
 
-Ideas: a weekly leaderboard, a per-learner heatmap page, streak badges, a Slack or Discord digest, or Catalyst Authentication so learners can claim their profile.
+Ideas: a weekly leaderboard, a per-learner heatmap page, streak badges, a Slack or Discord digest, Catalyst Authentication so learners can claim their profile, or a `GITHUB_TOKEN` so the sync covers every fork.
 
 ## Contributing
 

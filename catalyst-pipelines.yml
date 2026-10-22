@@ -13,8 +13,8 @@
 # event.ref as `main` rather than `refs/heads/main`, so that condition made every manual run fail.
 #
 # No `images:` block on purpose: every image entry must carry registry credentials, and without one the jobs run
-# on Catalyst's default Ubuntu image, which has the Catalyst CLI but Node 18. scripts/with-node20.sh fetches Node 20
-# from npm for the jobs that need it (tests, and the API's dependency install).
+# on Catalyst's default Ubuntu image. That image has Node 18 and no `catalyst` on the job's PATH, so
+# scripts/with-node20.sh fetches Node 20 from npm and scripts/with-catalyst.sh installs a pinned CLI (1.28.0).
 #
 # Why GITHUB_TOKEN and MAX_FORKS live here: a deploy replaces the function's variables with the ones in
 # catalyst-config.json. scripts/inject-fetcher-env.js fills that file in on the runner so they survive.
@@ -48,7 +48,7 @@ jobs:
     steps:
       - GITHUB_TOKEN="<< env.GITHUB_TOKEN >>" MAX_FORKS="<< env.MAX_FORKS >>" node scripts/inject-fetcher-env.js
       - >-
-        catalyst deploy --only functions:fetcher
+        sh scripts/with-node20.sh sh scripts/with-catalyst.sh catalyst deploy --only functions:fetcher
         --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --dc << env.CATALYST_DC >>
         --token << env.CATALYST_TOKEN >> -ni
 
@@ -57,7 +57,7 @@ jobs:
     steps:
       - sh scripts/with-node20.sh sh -c "cd backend && npm ci --omit=dev"
       - >-
-        catalyst deploy appsail --name leaderboard-api --build-path backend
+        sh scripts/with-node20.sh sh scripts/with-catalyst.sh catalyst deploy appsail --name leaderboard-api --build-path backend
         --stack node20 --command "node src/server.js"
         --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --dc << env.CATALYST_DC >>
         --token << env.CATALYST_TOKEN >> -ni
@@ -68,7 +68,7 @@ jobs:
       - echo "VITE_API_BASE=<< env.DEV_API_URL >>" > frontend/.env.production
       - node scripts/relink-slate.js
       - >-
-        catalyst deploy slate leaderboard-web -m "pipeline build"
+        sh scripts/with-node20.sh sh scripts/with-catalyst.sh catalyst deploy slate leaderboard-web -m "pipeline build"
         --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --dc << env.CATALYST_DC >>
         --token << env.CATALYST_TOKEN >> -ni
 

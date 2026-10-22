@@ -11,9 +11,9 @@ It reads learners' GitHub activity, stores it, and ranks who is consistent and w
 ![Docker](https://img.shields.io/badge/docker-linux%2Famd64-2496ed?style=flat-square&logo=docker&logoColor=white)
 ![Catalyst](https://img.shields.io/badge/catalyst-AppSail%20%C2%B7%20Slate%20%C2%B7%20Data%20Store-ff6a00?style=flat-square)
 
-<img src="docs/screenshot.png" alt="The leaderboard: podium for the top three, stats strip, and a full standings table with 90-day progress strips" width="760">
+<img src="docs/screenshots/leaderboard-production.png" alt="The live leaderboard: podium for the top three, a stats strip, and a standings table with 90-day progress strips" width="760">
 
-*Demo data, so no real learners appear here. The deployed site uses live GitHub data.*
+*The Production deployment with live GitHub data from learners' public forks.*
 
 </div>
 
@@ -42,10 +42,6 @@ The Production site, built from this repo and deployed to Catalyst (India data c
 
 - **Site:** <https://leaderboard-web-jkeyorhq.onslate.in>
 - **API health:** <https://leaderboard-api-50045941872.catalystappsail.in/api/health>
-
-<img src="docs/screenshots/production-stats.png" alt="Top of the production site showing 24 learners, 143 commits, a 16 day best streak, and 2 learners on a streak" width="760">
-
-*A real capture of the Production deployment. The standings below it are cropped out to keep learners' profiles private.*
 
 A push to `main` runs tests, deploys to Development, smoke-tests it, and then waits for a person before Production:
 

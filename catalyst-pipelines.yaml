@@ -95,11 +95,12 @@ jobs:
 # Production also needs its own GITHUB_TOKEN, MAX_FORKS, job pool, cron and CORS_ORIGIN.
 
 stages:
+  # This account allows 2 parallel jobs per stage, so the third test job runs after the pair.
   - name: test
     jobs:
       - - test-backend
-        - test-frontend
         - test-fetcher
+      - test-frontend
   - name: deploy-dev
     jobs:
       - - deploy-fetcher

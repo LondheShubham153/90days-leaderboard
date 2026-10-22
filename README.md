@@ -179,12 +179,12 @@ test (3 jobs in parallel) → deploy to Development → smoke test → human app
 | --- | --- |
 | `CATALYST_TOKEN` | CLI token (`catalyst token:generate`) |
 | `CATALYST_ORG`, `PROJECT_ID` | Where to deploy |
-| `DOCKER_USER`, `DOCKER_PASS` | Docker Hub login for pulling the Node image |
+| `REVIEWER_EMAIL` | Who approves the Production promotion |
 | `DEV_API_URL`, `PROD_API_URL` | AppSail URLs baked into the Slate build |
 
-Set them in the console under **Pipelines**, and put your own email on the `approve-production` job.
+Set them in the console under **Pipelines** (mark the token secret). The pipeline deploys the API with the managed Node 20 runtime, not Docker, because Catalyst does not document a Docker daemon on its runners. The Docker route in [Deploy to Catalyst](#deploy-to-catalyst) still works from your own machine.
 
-> **Status: template.** The test, build and smoke steps are verified locally. Two parts are not yet proven on a Catalyst runner: running a Docker daemon in `deploy-api-dev` (a managed-runtime fallback is in the file's comments), and `catalyst deploy --production` in `deploy-prod`. You also need to create the Production environment in the console first.
+> **Status: not yet run end to end.** The test, build and smoke steps are verified locally. Still unproven on a Catalyst runner: the deploy steps, and `catalyst deploy --production` in `deploy-prod`, which also needs a Production environment created in the console first.
 
 ## API
 

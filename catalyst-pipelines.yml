@@ -21,6 +21,16 @@
 version: 1.0
 
 jobs:
+  # Fails in seconds, naming any pipeline variable that is missing, before any test or deploy runs.
+  # Prints names and tool versions only, never a value.
+  preflight:
+    steps:
+      - >-
+        CATALYST_TOKEN="<< env.CATALYST_TOKEN >>" CATALYST_ORG="<< env.CATALYST_ORG >>"
+        CATALYST_DC="<< env.CATALYST_DC >>" PROJECT_ID="<< env.PROJECT_ID >>"
+        DEV_API_URL="<< env.DEV_API_URL >>" GITHUB_TOKEN="<< env.GITHUB_TOKEN >>"
+        MAX_FORKS="<< env.MAX_FORKS >>" sh scripts/check-pipeline-vars.sh
+
   # Tests and the dependency audit gate every deploy. The audit looks at what ships, not at dev tooling.
   test-backend:
     steps:
@@ -83,6 +93,9 @@ jobs:
 # Production also needs its own GITHUB_TOKEN, MAX_FORKS, job pool, cron and CORS_ORIGIN.
 
 stages:
+  - name: preflight
+    jobs:
+      - preflight
   # This account allows 2 parallel jobs per stage, so the third test job runs after the pair.
   - name: test
     jobs:

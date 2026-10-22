@@ -73,3 +73,22 @@ test('schema health is ok for a matching store', () =>
     assert.equal(res.status, 200);
     assert.equal((await res.json()).ok, true);
   }));
+
+test('responses carry security headers and do not advertise Express', () =>
+  withServer(async (base) => {
+    const res = await fetch(`${base}/api/health`);
+    assert.equal(res.headers.get('x-powered-by'), null);
+    assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+  }));
+
+test('CORS is limited to the configured origin', async () => {
+  const server = createApp(createMemoryStore(), { corsOrigin: 'https://app.example' }).listen(0);
+  try {
+    const res = await fetch(`http://127.0.0.1:${server.address().port}/api/health`, {
+      headers: { Origin: 'https://app.example' },
+    });
+    assert.equal(res.headers.get('access-control-allow-origin'), 'https://app.example');
+  } finally {
+    server.close();
+  }
+});

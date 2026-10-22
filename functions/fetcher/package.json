@@ -4,8 +4,8 @@
 	"main": "index.js",
 	"author": "TrainWithShubham",
 	"dependencies": {
-		"@zcatalyst/auth": "latest",
-		"@zcatalyst/datastore": "^1.0.0"
+		"@zcatalyst/auth": "1.0.0",
+		"@zcatalyst/datastore": "1.0.0"
 	},
 	"scripts": {
 		"test": "node --test test/*.test.js"

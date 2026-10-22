@@ -2,6 +2,7 @@
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 
 const CACHE_MS = 30 * 1000;
 
@@ -16,6 +17,9 @@ const summary = ({ days, ...rest }) => rest;
 
 function createApp(store, { corsOrigin = '*' } = {}) {
   const app = express();
+  app.disable('x-powered-by');
+  // AppSail's gateway already sends X-Frame-Options and HSTS; a second copy would conflict.
+  app.use(helmet({ frameguard: false, hsts: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(cors({ origin: corsOrigin }));
 
   let cache = { at: 0, ranked: [] };

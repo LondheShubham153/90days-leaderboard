@@ -44,6 +44,21 @@ export function Streak({ current, longest }) {
   );
 }
 
+// The arc from the TWS logo: bright where it leaves the ground, fading out toward the rocket.
+function Orbit() {
+  return (
+    <svg className="orbit" viewBox="0 0 960 300" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="orbit-fade" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stopColor="#7a4fc4" />
+          <stop offset="1" stopColor="#7a4fc4" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d="M 6 178 C 70 54, 330 6, 760 22" fill="none" stroke="url(#orbit-fade)" strokeWidth="5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
 function Avatar({ login, src }) {
   return <img className="avatar" src={src || `https://github.com/${login}.png`} alt="" loading="lazy" width="44" height="44" />;
 }
@@ -54,6 +69,7 @@ function Podium({ learners }) {
     <ol className="podium" aria-label="Top three learners">
       {order.map((l) => (
         <li key={l.login} className={`step place-${l.rank}`} style={{ '--i': l.rank }}>
+          {l.rank === 1 && <img className="lead" src="/rocket.png" alt="" width="44" height="44" />}
           <span className="place">{String(l.rank).padStart(2, '0')}</span>
           <Avatar login={l.login} src={l.avatar_url} />
           <a href={`https://github.com/${l.login}`} target="_blank" rel="noreferrer">
@@ -98,11 +114,25 @@ export default function App() {
   return (
     <main>
       <header className="masthead">
-        <p className="kicker">TrainWithShubham × Catalyst by Zoho</p>
-        <h1>
-          #90Days<span>Of</span>DevOps
-          <em>Leaderboard</em>
-        </h1>
+        <div className="bar">
+          <a className="brand" href="https://github.com/TrainWithShubham" target="_blank" rel="noreferrer">
+            <img src="/rocket.png" alt="" width="40" height="40" />
+            <span>TrainWithShubham</span>
+          </a>
+          <span className="tag">Happy learning</span>
+        </div>
+
+        <div className="hero">
+          <Orbit />
+          <img className="rocket" src="/rocket.png" alt="" width="150" height="150" />
+          <h1>
+            #90Days
+            <span className="line2">
+              <b>Of</b>DevOps
+            </span>
+            <em>Leaderboard</em>
+          </h1>
+        </div>
       </header>
 
       {status === 'loading' && <p className="note" role="status">Fetching the standings…</p>}
@@ -154,8 +184,16 @@ export default function App() {
       )}
 
       <footer>
-        Score = 10 per active day + 5 per streak day + commits (max 3/day). Synced from learners' forks of
-        TrainWithShubham/90DaysOfDevOps.
+        <img className="lockup" src="/tws-logo.png" alt="TWS, Happy Learning" width="132" height="132" loading="lazy" />
+        <div>
+          <p>
+            Score = 10 per active day + 5 per streak day + commits (max 3/day). Synced from learners' forks of
+            TrainWithShubham/90DaysOfDevOps.
+          </p>
+          <a href="https://github.com/TrainWithShubham/90days-leaderboard" target="_blank" rel="noreferrer">
+            Fork it, add a feature, share it ↗
+          </a>
+        </div>
       </footer>
     </main>
   );

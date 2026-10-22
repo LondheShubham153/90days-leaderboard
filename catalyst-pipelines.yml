@@ -13,7 +13,8 @@
 # event.ref as `main` rather than `refs/heads/main`, so that condition made every manual run fail.
 #
 # No `images:` block on purpose: every image entry must carry registry credentials, and without one the jobs run
-# on Catalyst's default Ubuntu image, which already has the Catalyst CLI. The test job checks that its Node is 20+.
+# on Catalyst's default Ubuntu image, which has the Catalyst CLI but Node 18. scripts/with-node20.sh fetches Node 20
+# from npm for the jobs that need it (tests, and the API's dependency install).
 #
 # Why GITHUB_TOKEN and MAX_FORKS live here: a deploy replaces the function's variables with the ones in
 # catalyst-config.json. scripts/inject-fetcher-env.js fills that file in on the runner so they survive.
@@ -23,16 +24,15 @@ jobs:
   # Tests and the dependency audit gate every deploy. The audit looks at what ships, not at dev tooling.
   test-backend:
     steps:
-      - node -e "if (Number(process.versions.node.split('.')[0]) < 20) { console.error('Node 20+ required, got ' + process.version); process.exit(1); }"
-      - cd backend && npm ci && npm test && npm audit --omit=dev --audit-level=high
+      - sh scripts/with-node20.sh sh -c "cd backend && npm ci && npm test && npm audit --omit=dev --audit-level=high"
 
   test-frontend:
     steps:
-      - cd frontend && npm ci && npm test && npm run build && npm audit --omit=dev --audit-level=high
+      - sh scripts/with-node20.sh sh -c "cd frontend && npm ci && npm test && npm run build && npm audit --omit=dev --audit-level=high"
 
   test-fetcher:
     steps:
-      - cd functions/fetcher && npm ci && npm test && npm audit --omit=dev --audit-level=high
+      - sh scripts/with-node20.sh sh -c "cd functions/fetcher && npm ci && npm test && npm audit --omit=dev --audit-level=high"
 
   deploy-fetcher:
     steps:
@@ -45,7 +45,7 @@ jobs:
   # --build-path ships the folder as it is, so install the runtime dependencies first.
   deploy-api:
     steps:
-      - cd backend && npm ci --omit=dev
+      - sh scripts/with-node20.sh sh -c "cd backend && npm ci --omit=dev"
       - >-
         catalyst deploy appsail --name leaderboard-api --build-path backend
         --stack node20 --command "node src/server.js"

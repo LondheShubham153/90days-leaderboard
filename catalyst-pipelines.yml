@@ -9,17 +9,15 @@
 #   GITHUB_TOKEN    GitHub token for the fetcher (secret); a fine-grained token with public read-only access is enough
 #   MAX_FORKS       how many forks one sync reads, e.g. 50
 #
+# No `pipeline-when` on purpose: the pipeline is already bound to branch main, and a manual run reports
+# event.ref as `main` rather than `refs/heads/main`, so that condition made every manual run fail.
+#
 # No `images:` block on purpose: every image entry must carry registry credentials, and without one the jobs run
 # on Catalyst's default Ubuntu image, which already has the Catalyst CLI. The test job checks that its Node is 20+.
 #
 # Why GITHUB_TOKEN and MAX_FORKS live here: a deploy replaces the function's variables with the ones in
 # catalyst-config.json. scripts/inject-fetcher-env.js fills that file in on the runner so they survive.
 version: 1.0
-
-pipeline-when:
-  equal:
-    - << event.ref >>
-    - refs/heads/main
 
 jobs:
   # Tests and the dependency audit gate every deploy. The audit looks at what ships, not at dev tooling.

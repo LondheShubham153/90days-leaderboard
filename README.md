@@ -51,6 +51,17 @@ A push to `main` runs tests, deploys to Development, smoke-tests it, and then wa
 
 *The first end-to-end run: about two minutes. `deploy-prod` is skipped until the `PROD_API_URL` variable is set.*
 
+### The same flow on Catalyst Pipelines
+
+[`catalyst-pipelines.yml`](catalyst-pipelines.yml) runs the flow inside Catalyst itself: `preflight` (checks the pipeline variables), tests, deploy to Development, and a smoke test. Run `dev-90days-leaderboard` from the console, or with the MCP's `Execute_Pipeline_Manually`.
+
+<p>
+<img src="docs/screenshots/catalyst-pipeline-test.png" alt="Catalyst Pipelines run: preflight, test-backend, test-fetcher and test-frontend all SUCCESS" width="380">
+<img src="docs/screenshots/catalyst-pipeline-deploy.png" alt="Catalyst Pipelines run: deploy-fetcher, deploy-api, deploy-web and smoke-dev all SUCCESS" width="380">
+</p>
+
+*Run `101294000000033013`, Development: `preflight` and the three test jobs, then `deploy-fetcher`, `deploy-api`, `deploy-web` and `smoke-dev`, all green. Production promotion is not wired up.*
+
 ## How it works
 
 ```mermaid
@@ -267,7 +278,7 @@ It also checks `/api/health/schema` and `/api/leaderboard`, retrying while the c
 
 > **Trap: your token is a secret.** `catalyst token:generate` prints a full-access token. Run it in your own terminal, put it straight into the secret, and never paste it into a chat or a log. Revoke old ones with `catalyst token:revoke <id>`.
 >
-> **Why GitHub Actions and not Catalyst Pipelines?** [`catalyst-pipelines.yml`](catalyst-pipelines.yml) is the same flow for Catalyst's own Pipelines service, but the Pipelines page was not available in the console used to build this repo, so that file has never run. The GitHub Actions workflow has.
+> **GitHub Actions or Catalyst Pipelines?** Both run the same flow. GitHub Actions deploys on every push to `main`. [`catalyst-pipelines.yml`](catalyst-pipelines.yml) runs on Catalyst Pipelines, which needs its own variables (see the comment at the top of the file); the default image there has Node 18 and no `catalyst` command, so the file installs Node 20 and a pinned CLI itself.
 
 ### 8. Promote to Production, with a human in the loop
 
@@ -337,7 +348,7 @@ Everything here was run against a real Catalyst project unless listed below.
 
 - **Not yet confirmed:** that the cron fires on its own. The run counters still showed 0 after the first scheduled times had passed. The manual run in Development succeeded; the two in Production reported `FAILURE` although rows were written (see chapter 9).
 - **Not set:** a `GITHUB_TOKEN`, so the sync is capped at 15 forks per run and about 60 requests an hour. The upstream repo has thousands of forks.
-- **Not run:** the Catalyst Pipelines file, `iac:import`, and the CI approval pause. `deploy-prod` is skipped until `PROD_API_URL` is set.
+- **Not run:** `iac:import`, and the CI approval pause. `deploy-prod` is skipped until `PROD_API_URL` is set.
 
 ## API
 
@@ -375,7 +386,7 @@ Everything here was run against a real Catalyst project unless listed below.
 │   └── relink-slate.js    Fixes the absolute Slate path catalyst.json records
 ├── .github/workflows/     CI/CD: test, deploy, smoke, approve
 ├── catalyst.json          Catalyst project resources
-└── catalyst-pipelines.yml   Same flow for Catalyst Pipelines (not yet run)
+└── catalyst-pipelines.yml   Same flow for Catalyst Pipelines (run on Development)
 ```
 
 ## Take the challenge

@@ -1,0 +1,101 @@
+# test -> deploy to Development -> verify
+#
+# Pipeline variables (console -> Pipelines -> your pipeline -> Variables; mark the two tokens secret):
+#   CATALYST_TOKEN  CLI token (secret)      catalyst token:generate
+#   CATALYST_ORG    org ID
+#   CATALYST_DC     data center: us, eu, in or au
+#   PROJECT_ID      project ID
+#   DEV_API_URL     https://leaderboard-api-<zaid>.development.catalystappsail.<dc>
+#   GITHUB_TOKEN    GitHub token for the fetcher (secret); a fine-grained token with public read-only access is enough
+#   MAX_FORKS       how many forks one sync reads, e.g. 50
+#
+# No `images:` block on purpose: every image entry must carry registry credentials, and without one the jobs run
+# on Catalyst's default Ubuntu image, which already has the Catalyst CLI. The test job checks that its Node is 20+.
+#
+# Why GITHUB_TOKEN and MAX_FORKS live here: a deploy replaces the function's variables with the ones in
+# catalyst-config.json. scripts/inject-fetcher-env.js fills that file in on the runner so they survive.
+version: 1.0
+
+pipeline-when:
+  equal:
+    - << event.ref >>
+    - refs/heads/main
+
+jobs:
+  # Tests and the dependency audit gate every deploy. The audit looks at what ships, not at dev tooling.
+  test-backend:
+    steps:
+      - node -e "if (Number(process.versions.node.split('.')[0]) < 20) { console.error('Node 20+ required, got ' + process.version); process.exit(1); }"
+      - cd backend && npm ci && npm test && npm audit --omit=dev --audit-level=high
+
+  test-frontend:
+    steps:
+      - cd frontend && npm ci && npm test && npm run build && npm audit --omit=dev --audit-level=high
+
+  test-fetcher:
+    steps:
+      - cd functions/fetcher && npm ci && npm test && npm audit --omit=dev --audit-level=high
+
+  deploy-fetcher:
+    steps:
+      - GITHUB_TOKEN="<< env.GITHUB_TOKEN >>" MAX_FORKS="<< env.MAX_FORKS >>" node scripts/inject-fetcher-env.js
+      - >-
+        catalyst deploy --only functions:fetcher
+        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --dc << env.CATALYST_DC >>
+        --token << env.CATALYST_TOKEN >> -ni
+
+  # --build-path ships the folder as it is, so install the runtime dependencies first.
+  deploy-api:
+    steps:
+      - cd backend && npm ci --omit=dev
+      - >-
+        catalyst deploy appsail --name leaderboard-api --build-path backend
+        --stack node20 --command "node src/server.js"
+        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --dc << env.CATALYST_DC >>
+        --token << env.CATALYST_TOKEN >> -ni
+
+  # Slate bakes the API address into the JavaScript at build time, so this runs after the API is up.
+  deploy-web:
+    steps:
+      - echo "VITE_API_BASE=<< env.DEV_API_URL >>" > frontend/.env.production
+      - node scripts/relink-slate.js
+      - >-
+        catalyst deploy slate leaderboard-web -m "pipeline build"
+        --project << env.PROJECT_ID >> --org << env.CATALYST_ORG >> --dc << env.CATALYST_DC >>
+        --token << env.CATALYST_TOKEN >> -ni
+
+  # Health, schema, data, and no X-Powered-By header. Retries while a fresh container starts.
+  smoke-dev:
+    steps:
+      - sh scripts/smoke.sh << env.DEV_API_URL >>
+
+# Promotion to Production is not wired up on purpose. The CLI used while building this (1.28.0) has no
+# `catalyst deploy --production` flag, so that step could not be verified. Once the Production
+# environment exists and you have a promotion command that works, add a manual approval and a deploy
+# job after `verify`, for example:
+#
+#   approve-production:
+#     type:
+#       type-name: approval
+#       type-variables:
+#         reviewers:
+#           - << env.REVIEWER_EMAIL >>
+#         message: Development is deployed and verified. Approve to promote to Production.
+#
+# Production also needs its own GITHUB_TOKEN, MAX_FORKS, job pool, cron and CORS_ORIGIN.
+
+stages:
+  # This account allows 2 parallel jobs per stage, so the third test job runs after the pair.
+  - name: test
+    jobs:
+      - - test-backend
+        - test-fetcher
+      - test-frontend
+  - name: deploy-dev
+    jobs:
+      - - deploy-fetcher
+        - deploy-api
+      - deploy-web
+  - name: verify
+    jobs:
+      - smoke-dev

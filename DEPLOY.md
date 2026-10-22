@@ -100,6 +100,8 @@ catalyst project:list                            # shows ORG_ID and PROJECT_ID
 catalyst init --org <ORG_ID> --project <PROJECT_ID> -ni
 ```
 
+`project:list` first asks you to pick your org with the arrow keys, so run it in a normal terminal, not through an AI agent or a script. The number in brackets is your **`ORG_ID`**, for example `Shubham (60088008769)`. Note that your own account (user) ID is a different number and is never used here. Once you know the org ID you can skip the prompt: `catalyst project:list --org <ORG_ID> -ni`.
+
 `init` writes `.catalystrc` in the repo root. It is gitignored: it holds your IDs, so never commit it.
 
 Check that `init` did not change the repo's Catalyst config:
